@@ -1,32 +1,18 @@
-<script setup lang="ts">
-import { ref } from "vue";
-import { invoke,  } from "@tauri-apps/api/core";
-
-const greetMsg = ref("");
-const name = ref("");
-
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
-}
-</script>
-
 <template>
   <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
+    <h1 :class="{ color: offline ? 'flicker' : 'default' }">植物大战僵尸杂交版V3.9</h1>
+    <a-flex direction="column" justify="center" align="center" style="margin: 20px 0">
+      <a-card title="基本信息" :bordered="false" style="width: 300px">
+        <div class="col-md-6">
+          进程id: {{ pid }}
+        </div>
+        <div class="col-md-6">
+          阳光值: {{ sunValue }}
+        </div>
+      </a-card>
+    </a-flex>
 
-    <div class="row">
-      <a href="https://vitejs.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+
 
     <form class="row" @submit.prevent="greet">
       <input id="greet-input" v-model="name" placeholder="Enter a name..." />
@@ -36,16 +22,77 @@ async function greet() {
   </main>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+import { invoke, } from "@tauri-apps/api/core";
+import { callRustType } from "./types/callRust";
+import { MusicPlayer } from "./utils";
+import { message } from 'ant-design-vue';
+// import { Flex , Card } from 'ant-design-vue';
+
+const greetMsg = ref("");
+const name = ref("");
+const mp3 = new MusicPlayer('/music/ding.mp3');
+
+const pid = ref(0);
+const sunValue = ref(0);
+
+const offline = ref(false);
+
+async function greet() {
+  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+  // greetMsg.value = await invoke("greet", { name: name.value });
+  if (name.value === '1') {
+    greetMsg.value = await invoke("call_rust", { types: callRustType.AddSun, text: "这是调用1" });
+    message.success(greetMsg.value);
+  } else if (name.value === '2') {
+    const JSONdata: string = await invoke("call_rust", { types: callRustType.GetSun, text: "请求阳光值" });
+    const data = JSON.parse(JSONdata);
+    // console.log(data);
+    sunValue.value = data.sun_value;
+    pid.value = data.pid;
+  } else if (name.value === '3') {
+    greetMsg.value = await invoke("call_rust", { types: "3", text: "这是调用3" });
+  }
+  mp3.setCurrentTime(0)
+  mp3.play()
 }
 
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
+onMounted(() => {
+  const intervalId = setInterval(() => {
+    getSunValue()
+  }, 2000)
+  onUnmounted(() => {
+    clearInterval(intervalId)
+    mp3.stop()
+  })
+})
+
+async function getSunValue() {
+  const JSONdata: string = await invoke("call_rust", { types: callRustType.GetSun, text: "请求阳光值" });
+  if (JSONdata.startsWith("错误")) {
+    // message.error("获取阳光值失败，没有开始游戏");
+    // console.log("获取阳光值失败，没有开始游戏" ,  new RegExp(/错误/g).test(JSONdata) );
+    offline.value = true;
+    sunValue.value = 0;
+    pid.value = 0;
+    return;
+  }else{
+    offline.value = false;
+  }
+  console.log(JSONdata);
+  const data = JSON.parse(JSONdata);
+  sunValue.value = data.sun_value;
+  pid.value = data.pid;
+  if (data.sun_value < 1000) {
+    // console.log("阳光值小于1000，+2000");
+    await invoke("call_rust", { types: callRustType.AddSun, text: "阳光值小于1000，+2000" });
+  }
 }
 
-</style>
+
+</script>
+
 <style>
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -54,7 +101,8 @@ async function greet() {
   font-weight: 400;
 
   color: #0f0f0f;
-  background-color: #f6f6f6;
+  background-color: #ececec;
+
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -72,35 +120,7 @@ async function greet() {
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
 
 input,
 button {
@@ -123,6 +143,7 @@ button {
 button:hover {
   border-color: #396cd8;
 }
+
 button:active {
   border-color: #396cd8;
   background-color: #e8e8e8;
@@ -152,9 +173,28 @@ button {
     color: #ffffff;
     background-color: #0f0f0f98;
   }
+
   button:active {
     background-color: #0f0f0f69;
   }
 }
 
+.flicker {
+  animation: flickerS 2s linear infinite;
+}
+
+
+@keyframes flickerS {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
 </style>
