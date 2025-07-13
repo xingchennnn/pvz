@@ -1,6 +1,6 @@
 <template>
   <main class="container">
-    <h1 :class="{ color: offline ? 'flicker' : 'default' }">植物大战僵尸杂交版V3.9</h1>
+    <h1 :class="{ flicker: offline  }">植物大战僵尸杂交版V3.9</h1>
     <a-flex direction="column" justify="center" align="center" style="margin: 20px 0">
       <a-card title="基本信息" :bordered="false" style="width: 300px">
         <div class="col-md-6">
@@ -43,7 +43,7 @@ async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   // greetMsg.value = await invoke("greet", { name: name.value });
   if (name.value === '1') {
-    greetMsg.value = await invoke("call_rust", { types: callRustType.AddSun, text: "这是调用1" });
+    greetMsg.value = await invoke("call_rust", { types: callRustType.AddSun, text: "添加阳光" });
     message.success(greetMsg.value);
   } else if (name.value === '2') {
     const JSONdata: string = await invoke("call_rust", { types: callRustType.GetSun, text: "请求阳光值" });
@@ -52,7 +52,7 @@ async function greet() {
     sunValue.value = data.sun_value;
     pid.value = data.pid;
   } else if (name.value === '3') {
-    greetMsg.value = await invoke("call_rust", { types: "3", text: "这是调用3" });
+    greetMsg.value = await invoke("call_rust", { types: callRustType.COOLING, text: "修改冷却" });
   }
   mp3.setCurrentTime(0)
   mp3.play()
@@ -77,7 +77,7 @@ async function getSunValue() {
     sunValue.value = 0;
     pid.value = 0;
     return;
-  }else{
+  } else {
     offline.value = false;
   }
   console.log(JSONdata);
@@ -181,6 +181,7 @@ button {
 
 .flicker {
   animation: flickerS 2s linear infinite;
+  color: red;
 }
 
 
@@ -190,7 +191,7 @@ button {
   }
 
   50% {
-    opacity: 0.5;
+    opacity: 0.3;
   }
 
   100% {

@@ -8,7 +8,7 @@ pub enum MemoryError {
     ReaderCreationFailed(String),
     MemoryReadFailed(String),
     MemoryWriteFailed(String),
-    Unknown,
+    // Unknown,
 }
 
 impl fmt::Display for MemoryError {
@@ -19,7 +19,7 @@ impl fmt::Display for MemoryError {
             MemoryError::ReaderCreationFailed(msg) => write!(f, "创建内存读取器失败: {}", msg),
             MemoryError::MemoryReadFailed(msg) => write!(f, "内存读取失败: {}", msg),
             MemoryError::MemoryWriteFailed(msg) => write!(f, "内存写入失败: {}", msg),
-            MemoryError::Unknown => write!(f, "未知错误"),
+            // MemoryError::Unknown => write!(f, "未知错误"),
         }
     }
 }

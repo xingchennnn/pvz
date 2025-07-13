@@ -43,11 +43,15 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
                 Err(e) => format!("错误: {}", e),
             }
         }
-        "2" => {
+        "cooling" => {
             // 调用 Rust 函数
-            let res = greet(text);
-            println!("type {}", res);
-            return res.to_string();
+            // let res = greet(text);
+            // println!("type {}", res);
+            // return res.to_string();
+            match memory::operat::cooling() {
+                Ok(result) => result,
+                Err(e) => format!("错误: {}", e),
+            }
         }
         _ => {
             return "hahahh".to_string();
