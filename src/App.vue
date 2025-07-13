@@ -84,9 +84,9 @@ async function getSunValue() {
   const data = JSON.parse(JSONdata);
   sunValue.value = data.sun_value;
   pid.value = data.pid;
-  if (data.sun_value < 1000) {
+  if (data.sun_value < 5000) {
     // console.log("阳光值小于1000，+2000");
-    await invoke("call_rust", { types: callRustType.AddSun, text: "阳光值小于1000，+2000" });
+    await invoke("call_rust", { types: callRustType.AddSun, text: "阳光值小于5000，+5000" });
   }
 }
 
