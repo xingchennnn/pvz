@@ -1,5 +1,7 @@
 // use crate::memory::error::MemoryError;
-use windows::{core::Array, Win32::{
+use windows::{
+    // core::Array,
+    Win32::{
     // Foundation::HANDLE,
     Foundation::{CloseHandle, HANDLE},
     System::{

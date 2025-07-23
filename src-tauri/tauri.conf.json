@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "test_tauri",
+        "title": "植物大战僵尸v3.9",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "center": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": [ "hudWindow","acrylic", "mica"],
+          "radius": 12
+        }
       }
     ],
     "security": {

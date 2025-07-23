@@ -1,6 +1,6 @@
 <template>
   <main class="container">
-    <h1 :class="{ flicker: offline  }">植物大战僵尸杂交版V3.9</h1>
+    <!-- <h1 :class="{ flicker: offline  }">植物大战僵尸杂交版V3.9</h1> -->
     <a-flex direction="column" justify="center" align="center" style="margin: 20px 0">
       <a-card title="基本信息" :bordered="false" style="width: 300px">
         <div class="col-md-6">
@@ -101,7 +101,7 @@ async function getSunValue() {
   font-weight: 400;
 
   color: #0f0f0f;
-  background-color: #ececec;
+  /* background-color: #ececec; */
 
 
   font-synthesis: none;
