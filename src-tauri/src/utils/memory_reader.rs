@@ -93,7 +93,7 @@ impl MemoryReader {
                 data.len(),
                 Some(&mut bytes_written),
             )
-        }?;
+        }?; 
 
         if bytes_written != data.len() {
             return Err(windows::core::Error::new(

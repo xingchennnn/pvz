@@ -10,7 +10,7 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn call_rust(types: &str, text: &str) -> std::string::String {
-    println!("call_rust: {} , text: {}", types, text);
+    // println!("call_rust: {} , text: {}", types, text);
     match types {
         "AddSun" => {
 
