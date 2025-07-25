@@ -63,6 +63,13 @@ async function greet() {
       types: callRustType.GetSun,
       text: "请求阳光值",
     });
+    if (JSONdata.startsWith("错误")) {
+      message.error("获取阳光值失败，没有开始游戏");
+      sunValue.value = 0;
+      pid.value = 0;
+      message.error(JSONdata);
+      return;
+    }
     const data = JSON.parse(JSONdata);
     sunValue.value = data.sun_value;
     pid.value = data.pid;
