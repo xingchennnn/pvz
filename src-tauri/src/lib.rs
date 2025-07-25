@@ -13,7 +13,6 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
     // println!("call_rust: {} , text: {}", types, text);
     match types {
         "AddSun" => {
-
             // 使用match来处理Result，将错误转换为字符串
             match memory::operat::add_sun(text) {
                 Ok(result) => result,
@@ -35,7 +34,9 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
             }
         }
         _ => {
-            return "hahahh".to_string();
+            let mut _string = String::from("你输入的是:");
+            _string.push_str(text);
+            _string
         }
     }
 }
@@ -45,7 +46,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![greet, call_rust])
-     
         .run(tauri::generate_context!())
         .expect("启动失败");
 }

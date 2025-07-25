@@ -5,7 +5,6 @@
       direction="column"
       justify="center"
       align="center"
-    
       class="mt-20px mb-20px"
     >
       <a-card title="基本信息" :bordered="false" style="width: 300px">
@@ -30,11 +29,10 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { callRustType } from "@/types/callRust";
 import { MusicPlayer } from "@/utils";
 import { message } from "ant-design-vue";
-// import { Flex , Card } from 'ant-design-vue';
+import { callRust } from "@/utils/callRust";
 
 const greetMsg = ref("");
 const name = ref("");
@@ -48,41 +46,37 @@ const offline = ref(false);
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   // greetMsg.value = await invoke("greet", { name: name.value });
-  // console.log("name", name.value);
-  // message.success("name:"+ name.value);
-  
 
-  if (name.value === "1") {
-    greetMsg.value = await invoke("call_rust", {
-      types: callRustType.AddSun,
-      text: "添加阳光",
-    });
-    message.success(greetMsg.value);
-  } else if (name.value === "2") {
-    const JSONdata: string = await invoke("call_rust", {
-      types: callRustType.GetSun,
-      text: "请求阳光值",
-    });
-    if (JSONdata.startsWith("错误")) {
-      message.error("获取阳光值失败，没有开始游戏");
-      sunValue.value = 0;
-      pid.value = 0;
-      message.error(JSONdata);
-      return;
-    }
-    const data = JSON.parse(JSONdata);
-    sunValue.value = data.sun_value;
-    pid.value = data.pid;
-  } else if (name.value === "3") {
-    greetMsg.value = await invoke("call_rust", {
-      types: callRustType.COOLING,
-      text: "修改冷却",
-    });
-  } else {
-    greetMsg.value = await invoke("call_rust", {
-      types: callRustType.NONE,
-      text: "未知命令",
-    });
+  switch (name.value) {
+    case "1":
+      callRust(callRustType.AddSun, "添加阳光").then((res) => {
+        greetMsg.value = res;
+      });
+      break;
+    case "2":
+      callRust(callRustType.GetSun, "请求阳光值").then((res) => {
+        if (res.startsWith("错误")) {
+          message.error("获取阳光值失败，没有开始游戏");
+          sunValue.value = 0;
+          pid.value = 0;
+          message.error(res);
+          return;
+        }
+        const data = JSON.parse(res);
+        sunValue.value = data.sun_value;
+        pid.value = data.pid;
+      });
+      break;
+    case "3":
+      callRust(callRustType.COOLING, "修改冷却").then((res) => {
+        greetMsg.value = res;
+      });
+      break;
+    default:
+      callRust(callRustType.NONE, name.value).then((res) => {
+        greetMsg.value = res;
+      });
+      break;
   }
   mp3.setCurrentTime(0);
   mp3.play();
@@ -98,32 +92,22 @@ onMounted(() => {
   });
 });
 
-async function getSunValue() {
-  const JSONdata: string = await invoke("call_rust", {
-    types: callRustType.GetSun,
-    text: "请求阳光值",
-  });
-  if (JSONdata.startsWith("错误")) {
-    // message.error("获取阳光值失败，没有开始游戏");
-    // console.log("获取阳光值失败，没有开始游戏" ,  new RegExp(/错误/g).test(JSONdata) );
-    offline.value = true;
-    sunValue.value = 0;
-    pid.value = 0;
-    return;
-  } else {
-    offline.value = false;
-  }
-  console.log(JSONdata);
-  const data = JSON.parse(JSONdata);
-  sunValue.value = data.sun_value;
-  pid.value = data.pid;
-  if (data.sun_value < 5000) {
-    // console.log("阳光值小于1000，+2000");
-    await invoke("call_rust", {
-      types: callRustType.AddSun,
-      text: "阳光值小于5000，+5000",
+function getSunValue() {
+  callRust(callRustType.GetSun, "请求阳光值")
+    .then((JSONdata) => {
+      offline.value = false;
+      const data = JSON.parse(JSONdata);
+      sunValue.value = data.sun_value;
+      pid.value = data.pid;
+      if (data.sun_value < 5000) {
+        callRust(callRustType.AddSun, "阳光值小于5000，+5000");
+      }
+    })
+    .catch(() => {
+      offline.value = true;
+      sunValue.value = 0;
+      pid.value = 0;
     });
-  }
 }
 </script>
 
