@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "植物大战僵尸v3.9",
-        "width": 800,
-        "height": 600,
+        "width": 600,
+        "height": 500,
         "center": true,
         "transparent": true,
         "windowEffects": {

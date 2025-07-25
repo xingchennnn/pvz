@@ -20,7 +20,7 @@
     </form> -->
     <div class="flex justify-center items-center w-full">
       <div class="w-40% flex gap-2">
-        <a-input v-model="name" placeholder="请输入代码" />
+        <a-input v-model:value="name" placeholder="请输入代码" />
         <a-button type="primary" @click="greet">调用</a-button>
       </div>
     </div>
@@ -48,7 +48,8 @@ const offline = ref(false);
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   // greetMsg.value = await invoke("greet", { name: name.value });
-  console.log("name", name.value);
+  // console.log("name", name.value);
+  // message.success("name:"+ name.value);
   
 
   if (name.value === "1") {

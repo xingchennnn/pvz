@@ -10,9 +10,12 @@ const pinia = createPinia()
 
 createApp(App).use(pinia).use(router).mount("#app");
 
-document.oncontextmenu = function () { // 关闭右键菜单
-  return false;
-};
+
+if(process.env.NODE_ENV === 'production'){
+  document.oncontextmenu = function () { // 关闭右键菜单
+    return false;
+  };
+}
 
 
 
