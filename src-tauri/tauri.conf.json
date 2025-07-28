@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "植物大战僵尸杂交版 v3.9",
-        "width": 500,
-        "height": 350
+        "title": "植物大战僵尸v3.9",
+        "width": 600,
+        "height": 500,
+        "center": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": [ "hudWindow","acrylic", "mica"],
+          "radius": 12
+        }
       }
     ],
     "security": {

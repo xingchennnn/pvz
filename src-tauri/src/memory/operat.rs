@@ -7,21 +7,20 @@ use serde::{Deserialize, Serialize};
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{CloseHandle, HANDLE},
-        System::{
-            Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
-            Diagnostics::ToolHelp::{
-                CreateToolhelp32Snapshot, Module32First, Module32Next, MODULEENTRY32,
-                TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32,
-            },
-            Threading::{
-                OpenProcess, PROCESS_ALL_ACCESS, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ ,
-                PROCESS_VM_OPERATION, PROCESS_VM_WRITE,
-            },
-        },
-        UI::WindowsAndMessaging::{
-            FindWindowW, GetWindowThreadProcessId,
-        },
+        // Foundation::{CloseHandle, HANDLE},
+            // System::{
+            // Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
+            // Diagnostics::ToolHelp::{
+            //     CreateToolhelp32Snapshot, Module32First, Module32Next, MODULEENTRY32,
+            //     TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32,
+            // },
+            // Threading::{
+            //     OpenProcess, PROCESS_ALL_ACCESS, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ ,
+            //     PROCESS_VM_OPERATION, PROCESS_VM_WRITE,
+            // },
+        // },
+
+        UI::WindowsAndMessaging::{FindWindowW, GetWindowThreadProcessId},
     },
 };
 
@@ -102,42 +101,13 @@ pub fn cooling() -> Result<String, MemoryError> {
         pid => pid,
     };
 
-    //
-    // unsafe {
-    //     let handle = OpenProcess(
-    //         PROCESS_ALL_ACCESS,
-    //         false,
-    //         pid,
-    //     )
-    //     .expect("OpenProcess failed");
-        
-
-    //     let data = [0x7fu8, 0x14];
-    //     let address = 0x00487296 as *mut _;
-    //     let mut bytes_written = 0;
-
-    //     if WriteProcessMemory(
-    //         handle,
-    //         address,
-    //         data.as_ptr() as _,
-    //         data.len(),
-    //         Some(&mut bytes_written),
-    //     )
-    //     .is_ok()
-    //     {
-    //         CloseHandle(handle);
-    //     } else {
-    //         CloseHandle(handle);
-    //     }
-    // }
-
     // 创建内存读取器
     let reader =
         MemoryReader::new(pid).map_err(|e| MemoryError::ReaderCreationFailed(e.to_string()))?;
 
     // 修改冷却
-    let new_sun_value = [0x7f , 0x14];
-    let _address =  0x00487296;
+    let new_sun_value = [0x7f, 0x14];
+    let _address = 0x00487296;
 
     reader
         .write_cold(_address, new_sun_value)

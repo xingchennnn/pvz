@@ -1,5 +1,7 @@
 // use crate::memory::error::MemoryError;
-use windows::{core::Array, Win32::{
+use windows::{
+    // core::Array,
+    Win32::{
     // Foundation::HANDLE,
     Foundation::{CloseHandle, HANDLE},
     System::{
@@ -91,7 +93,7 @@ impl MemoryReader {
                 data.len(),
                 Some(&mut bytes_written),
             )
-        }?;
+        }?; 
 
         if bytes_written != data.len() {
             return Err(windows::core::Error::new(
