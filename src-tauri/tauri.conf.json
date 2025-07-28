@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "test_tauri",
-  "version": "0.1.0",
-  "identifier": "com.test-tauri.app",
+  "productName": "PVZ_Hybrid",
+  "version": "0.1.1",
+  "identifier": "top.goteam",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "test_tauri",
-        "width": 800,
-        "height": 600
+        "title": "植物大战僵尸杂交版 v3.9",
+        "width": 500,
+        "height": 350
       }
     ],
     "security": {
