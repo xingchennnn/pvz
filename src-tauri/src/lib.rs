@@ -33,6 +33,14 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
                 Err(e) => format!("错误: {}", e),
             }
         }
+        "getDefaultAudioDevice" => {
+            // 获取默认音频设备
+            // match memory::operat::get_default_audio_device() {
+            //     Ok(result) => result,
+            //     Err(e) => format!("错误: {}", e),
+            // }
+            "默认音频设备".to_string()
+        }
         _ => {
             let mut _string = String::from("你输入的是:");
             _string.push_str(text);
