@@ -6,6 +6,7 @@ import {router} from "./routers/index";
 import "ant-design-vue/dist/reset.css";
 import 'virtual:uno.css'; // 引入Uno.css
 
+
 const pinia = createPinia()
 
 createApp(App).use(pinia).use(router).mount("#app");
@@ -17,5 +18,6 @@ if(process.env.NODE_ENV === 'production'){
   };
 }
 
+import './assets/scss/main.css' // 引入全局样式文件
 
 
