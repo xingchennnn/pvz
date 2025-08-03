@@ -5,3 +5,9 @@ export enum callRustType {
 
     NONE = "none", // 无操作
 }
+
+
+
+export enum cpalType {
+    getDefaultAudioDevice = "getDefaultAudioDevice", // 获取默认音频设备
+}

@@ -19,8 +19,14 @@
     </form> -->
     <div class="flex justify-center items-center w-full">
       <div class="w-40% flex gap-2">
-        <a-input v-model:value="name" placeholder="请输入代码" />
-        <a-button type="primary" @click="greet">调用</a-button>
+        <!-- <a-input v-model:value="name" placeholder="请输入代码" /> -->
+         <a-select v-model:value="name" placeholder="请选择功能" class="w-full">
+           <a-select-option value="1">添加阳光</a-select-option>
+           <a-select-option value="2">请求阳光值</a-select-option>
+           <a-select-option value="3">修改冷却</a-select-option>
+           <!-- <a-select-option value="getDefaultAudioDevice">设备</a-select-option> -->
+         </a-select>
+        <a-button type="primary" @click="greet">执行</a-button>
       </div>
     </div>
     <p>{{ greetMsg }}</p>
@@ -65,11 +71,17 @@ async function greet() {
         const data = JSON.parse(res);
         sunValue.value = data.sun_value;
         pid.value = data.pid;
+      }).catch(() => {
+        message.error("获取阳光值失败");
+        sunValue.value = 0;
+        pid.value = 0;
       });
       break;
     case "3":
       callRust(callRustType.COOLING, "修改冷却").then((res) => {
         greetMsg.value = res;
+      }).catch(() => {
+        message.error("修改冷却失败");
       });
       break;
     default:

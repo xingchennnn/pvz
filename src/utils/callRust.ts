@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import { callRustType } from "@/types/callRust";
+import { callRustType, cpalType } from "@/types/callRust";
 import { message } from "ant-design-vue";
 
 let lastErrorMsg = "";
 let lastErrorTime = 0;
 const ERROR_INTERVAL = 10000; // 10秒内只弹一次
 
-export function callRust(types: callRustType, text: any): Promise<string> {
+export function callRust(types: callRustType | cpalType, text: any): Promise<string> {
   return new Promise(async (resolve, reject) => {
     let result: string = await invoke("call_rust", { types, text });
 
@@ -26,3 +26,5 @@ export function callRust(types: callRustType, text: any): Promise<string> {
     }
   });
 }
+
+

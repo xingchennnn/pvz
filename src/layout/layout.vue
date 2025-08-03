@@ -22,10 +22,12 @@
       </a-menu>
     </a-layout-sider>
     <a-layout class="p-0">
-      <a-layout-header class="h-24px flex justify-between items-center" >
+      <a-layout-header class="h-24px flex justify-between items-center bg-[var(--bg-color)]" >
         <div class="header-left">
-          <menu-unfold-outlined v-if="collapsed" class="trigger color-[var(--text-color)]" @click="() => (collapsed = !collapsed)" />
-          <menu-fold-outlined v-else class="trigger color-[var(--text-color)]" @click="() => (collapsed = !collapsed)"  />
+          <i class="color-[var(--text-color)]">
+            <menu-unfold-outlined v-if="collapsed" class="trigger " @click="() => (collapsed = !collapsed)" />
+            <menu-fold-outlined v-else class="trigger" @click="() => (collapsed = !collapsed)"  />
+          </i>
         </div>
         <div class="header-right">
           <a-switch :checked="themeStore.isDarkMode" @change="themeChange">
@@ -79,7 +81,7 @@ const router = useRouter();
 
 // 监听主题色变化
 const themeChange = (e: any) => {
-  console.log(`output->${e}`);
+  // console.log(`output->${e}`);
   themeStore.toggleDarkMode();
 };
 

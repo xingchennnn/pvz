@@ -12,16 +12,42 @@ export const useThemeStore = defineStore('theme', {
         checked3: StorageUtils.getItem(StorageKeys.PAGE_CONFIG_DARK_MODE) || false, // 是否开启暗黑模式
     }),
     getters: {
-        isDarkMode: (state) => state.checked3, // 获取暗黑模式状态
+        isDarkMode: (state) => {
+            useThemeStore().setDarkMode(state.checked3)
+            return state.checked3
+        }, // 获取暗黑模式状态
     },
     actions: {
         // 这里可以设置 actions
         toggleDarkMode() {
             // 切换状态
             this.checked3 = !this.checked3
-            document.body.classList.toggle('dark-theme')
+            // console.log('切换暗黑模式', this.checked3);
+
+            if (this.checked3) {
+                document.body.classList.add('dark-theme')
+            } else {
+                document.body.classList.remove('dark-theme')
+            }
             // 持久化到 localStorage
             StorageUtils.setItem(StorageKeys.PAGE_CONFIG_DARK_MODE, this.checked3)
-        }
+        },
+        // 设置暗黑模式
+        setDarkMode(value: boolean) {
+
+            // 如果传入的 value 与当前状态一致，则不执行任何操作
+            if (value === this.checked3) return;
+            // 设置状态
+            this.checked3 = value
+            // console.log('设置暗黑模式', this.checked3);
+
+            if (this.checked3) {
+                document.body.classList.add('dark-theme')
+            } else {
+                document.body.classList.remove('dark-theme')
+            }
+            // 持久化到 localStorage
+            StorageUtils.setItem(StorageKeys.PAGE_CONFIG_DARK_MODE, this.checked3)
+        },
     }
 })
