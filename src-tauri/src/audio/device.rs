@@ -30,6 +30,10 @@ pub fn start_noise_reduction() -> String {
     let (mut prod, mut cons) = ring.split();
 
     let host = cpal::default_host();
+    // 获取所有设备
+    // let devices = host.devices();
+    // println!("设备数量: {}  设备列表: ", devices );
+    // 获取默认设备
     let input = host.default_input_device().expect("无输入设备");
     let output = host.default_output_device().expect("无输出设备");
 
@@ -75,11 +79,11 @@ pub fn start_noise_reduction() -> String {
     // 线程也要独立克隆
     let thread_running = running.clone();
     let handle = thread::spawn(move || {
-        println!("🎤 降噪线程已启动，但尚未开始监听");
+        println!("🎤 降噪线程已启动");
         while thread_running.load(Ordering::SeqCst) {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        println!("🛑 降噪线程已退出");
+        // println!("🛑 降噪线程已退出");
     });
 
     *guard = Some(AudioState {
