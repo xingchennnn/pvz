@@ -1,5 +1,6 @@
 :root {
   --bg-color: #ffffff;
+  --layout-bg-color: #f5f5f5;
   --text-color: #222222;
   --primary-color: #1890ff;
   --logo-height: 40px;
@@ -7,6 +8,7 @@
 
 .dark-theme {
   --bg-color: #181818;
+  --layout-bg-color: #001528;
   --text-color: #eeeeee;
   --primary-color: #177ddc;
   --logo-height: 40px;

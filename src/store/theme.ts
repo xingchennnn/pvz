@@ -13,11 +13,18 @@ export const useThemeStore = defineStore('theme', {
     }),
     getters: {
         isDarkMode: (state) => {
-            useThemeStore().setDarkMode(state.checked3)
             return state.checked3
         }, // 获取暗黑模式状态
     },
     actions: {
+        init(){
+            // 初始化时，从 localStorage 中获取是否开启暗黑模式
+            const checked3 = StorageUtils.getItem(StorageKeys.PAGE_CONFIG_DARK_MODE)
+            if (checked3) {
+                this.checked3 = checked3
+                document.body.classList.add('dark-theme')
+            }
+        },
         // 这里可以设置 actions
         toggleDarkMode() {
             // 切换状态

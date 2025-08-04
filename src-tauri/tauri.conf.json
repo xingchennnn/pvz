@@ -12,8 +12,8 @@
   "app": {
     "windows": [
       {
-        "title": "植物大战僵尸v3.9",
-        "width": 600,
+        "title": "Hybrid_Tool",
+        "width": 750,
         "height": 500,
         "center": true,
         "transparent": true,

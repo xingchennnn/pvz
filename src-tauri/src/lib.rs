@@ -4,7 +4,10 @@ mod memory;
 mod utils;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 // use cpal::{Data, FromSample, Sample, SampleFormat, SizedSample};
-use ringbuf::{traits::{Consumer, Producer, Split}, HeapRb};
+use ringbuf::{
+    traits::{Consumer, Producer, Split},
+    HeapRb,
+};
 // use std::sync::{Arc, Mutex};
 mod audio;
 
@@ -79,29 +82,33 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
             let (mut prod, mut cons) = ring.split();
 
             // 启动输入流（麦克风）
-            let input_stream = input_device.build_input_stream(
-                &input_config,
-                move |data: &[f32], _| {
-                    for &sample in data {
-                        let _ = prod.try_push(sample);
-                    }
-                },
-                move |err| eprintln!("输入错误: {}", err),
-                None,
-            ).expect("创建输入流失败");
+            let input_stream = input_device
+                .build_input_stream(
+                    &input_config,
+                    move |data: &[f32], _| {
+                        for &sample in data {
+                            let _ = prod.try_push(sample);
+                        }
+                    },
+                    move |err| eprintln!("输入错误: {}", err),
+                    None,
+                )
+                .expect("创建输入流失败");
 
-            let output_stream = output_device.build_output_stream(
-                &output_config,
-                move |data: &mut [f32], _| {
-                    for frame in data.chunks_mut(2) {
-                        let sample = cons.try_pop().unwrap_or(0.0);
-                        frame[0] = sample;
-                        frame[1] = sample;
-                    }
-                },
-                move |err| eprintln!("输出错误: {}", err),
-                None,
-            ).expect("创建输出流失败");
+            let output_stream = output_device
+                .build_output_stream(
+                    &output_config,
+                    move |data: &mut [f32], _| {
+                        for frame in data.chunks_mut(2) {
+                            let sample = cons.try_pop().unwrap_or(0.0);
+                            frame[0] = sample;
+                            frame[1] = sample;
+                        }
+                    },
+                    move |err| eprintln!("输出错误: {}", err),
+                    None,
+                )
+                .expect("创建输出流失败");
 
             println!("输入设备格式: {:?}", input_config);
             println!("输出设备格式: {:?}", output_config);
@@ -113,7 +120,6 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
 
             // 等待 ctrl+c
             // std::thread::park();
-
 
             "默认音频设备".to_string()
         }
@@ -129,7 +135,15 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, call_rust ,audio::device::start_noise_reduction , audio::device::stop_noise_reduction ])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            call_rust,
+            audio::device::start_noise_reduction,
+            audio::device::stop_noise_reduction,
+            audio::device::open_listener,
+            audio::device::close_listener,
+            // audio::device::get_listener_status,
+        ])
         .run(tauri::generate_context!())
         .expect("启动失败");
 }
