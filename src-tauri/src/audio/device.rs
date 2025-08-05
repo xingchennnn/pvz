@@ -1,8 +1,22 @@
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
-use std::thread::{self, JoinHandle};
-use cpal::{traits::{DeviceTrait, HostTrait, StreamTrait}, Stream};
-use ringbuf::{traits::{Consumer, Producer, Split}, HeapRb};
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    Stream,
+};
 use once_cell::sync::OnceCell;
+use ringbuf::{
+    traits::{Consumer, Producer, Split},
+    HeapRb,
+};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+use std::thread::{self, JoinHandle};
+// use windows::Win32::System::Diagnostics::Debug;
+// 虚拟麦克风依赖
+use std::path::Path;
+use std::process::Command;
+use std::time::Duration;
 
 struct AudioState {
     handle: Option<JoinHandle<()>>,
@@ -37,44 +51,53 @@ pub fn start_noise_reduction() -> String {
     let input = host.default_input_device().expect("无输入设备");
     let output = host.default_output_device().expect("无输出设备");
 
-    let input_config = input.default_input_config().unwrap().into();
-    let output_config = output.default_output_config().unwrap().into();
+    let input_config: cpal::StreamConfig = input.default_input_config().unwrap().into();
+    let output_config: cpal::StreamConfig = output.default_output_config().unwrap().into();
+
+    println!(
+        "输入设备: {:?}, 输出设备: {:?}",
+        input_config, output_config
+    );
 
     // 每个闭包中都克隆 running
     let input_running = running.clone();
-    let input_stream = input.build_input_stream(
-        &input_config,
-        move |data: &[f32], _| {
-            if input_running.load(Ordering::SeqCst) {
-                for &sample in data {
-                    let _ = prod.try_push(sample);
+    let input_stream = input
+        .build_input_stream(
+            &input_config,
+            move |data: &[f32], _| {
+                if input_running.load(Ordering::SeqCst) {
+                    for &sample in data {
+                        let _ = prod.try_push(sample);
+                    }
                 }
-            }
-        },
-        move |err| eprintln!("输入流错误: {}", err),
-        None,
-    ).unwrap();
+            },
+            move |err| eprintln!("输入流错误: {}", err),
+            None,
+        )
+        .unwrap();
 
     let output_running = running.clone();
-    let output_stream = output.build_output_stream(
-        &output_config,
-        move |data: &mut [f32], _| {
-            if output_running.load(Ordering::SeqCst) {
-                for frame in data.chunks_mut(2) {
-                    let sample = cons.try_pop().unwrap_or(0.0);
-                    frame[0] = sample;
-                    frame[1] = sample;
+    let output_stream = output
+        .build_output_stream(
+            &output_config,
+            move |data: &mut [f32], _| {
+                if output_running.load(Ordering::SeqCst) {
+                    for frame in data.chunks_mut(2) {
+                        let sample = cons.try_pop().unwrap_or(0.0);
+                        frame[0] = sample;
+                        frame[1] = sample;
+                    }
+                } else {
+                    for frame in data.chunks_mut(2) {
+                        frame[0] = 0.0;
+                        frame[1] = 0.0;
+                    }
                 }
-            } else {
-                for frame in data.chunks_mut(2) {
-                    frame[0] = 0.0;
-                    frame[1] = 0.0;
-                }
-            }
-        },
-        move |err| eprintln!("输出流错误: {}", err),
-        None,
-    ).unwrap();
+            },
+            move |err| eprintln!("输出流错误: {}", err),
+            None,
+        )
+        .unwrap();
 
     // 线程也要独立克隆
     let thread_running = running.clone();
@@ -151,4 +174,51 @@ pub fn close_listener() -> String {
     "降噪线程未启动".into()
 }
 
+/**安装虚拟麦克风 */
 
+fn install_vbcable() -> String {
+    let installer = Path::new("VBCABLE_Setup_x64.exe");
+    if !installer.exists() {
+        return "❌ 找不到安装包".into();
+    }
+    // 以管理员模式启动静默安装
+    Command::new("powershell")
+        .args(&[
+            "Start-Process",
+            installer.to_str().unwrap(),
+            "-ArgumentList",
+            "\"-i -h\"",
+            "-Verb",
+            "RunAs",
+            "-Wait",
+        ])
+        .status().expect("安装失败，请确认是否以管理员身份运行，并手动安装驱动");
+
+    "✅ 安装成功".into()
+}
+
+// 检查设备是否安装成功（示例：列出音频设备名称）
+fn check_vbcable_installed() -> String {
+    let host = cpal::default_host();
+    for dev in host.output_devices().expect("获取输出设备失败") {
+        if dev.name().unwrap().contains("CABLE Output") {
+            return "true".into();
+        }
+    }
+    
+    "❌ VB‑Cable 未安装".into()
+}
+
+// 用户点击时调用
+#[tauri::command]
+pub fn on_install_vbcable() -> String {
+    install_vbcable();
+    // 安装后稍等几秒让 Windows 注册设备
+    thread::sleep(Duration::from_secs(5));
+    if check_vbcable_installed() == "✅ VB‑Cable 已安装" {
+        println!("✅ VB‑Cable 已安装，可以在微信中选择“CABLE Output”作为麦克风");
+    } else {
+        eprintln!("❌ 安装失败，请确认是否以管理员身份运行，并手动安装驱动");
+    }
+    "安装成功".into()
+}

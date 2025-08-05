@@ -142,6 +142,7 @@ pub fn run() {
             audio::device::stop_noise_reduction,
             audio::device::open_listener,
             audio::device::close_listener,
+            audio::device::on_install_vbcable
             // audio::device::get_listener_status,
         ])
         .run(tauri::generate_context!())
