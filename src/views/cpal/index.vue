@@ -16,11 +16,14 @@
     <a-button v-else @click="openListener(false)" class="ml-10px"
       >关闭监听</a-button
     >
+    <a-button @click="createWindow">打开一个新窗口</a-button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
+// import { Window } from "@tauri-apps/api/window";
 import { message } from "ant-design-vue";
 import { ref } from "vue";
 
@@ -58,5 +61,32 @@ const openListener = async (open: boolean) => {
     isListenerOpen.value = false;
     message.info(res, 1);
   }
+};
+
+/**新窗口 */
+const createWindow = () => {
+  const Window1 = new WebviewWindow("detail", {
+    url: "#/cpal/detail",
+    title: "详情",
+    width: 800,
+    height: 600,
+    center: true,
+    // resizable: true,
+    // alwaysOnTop: true,
+    // transparent: true,
+    // hiddenTitle: true,
+    // maximized: true,
+    // visible: false,
+    // skipTaskbar: false,
+  });
+  Window1.show();
+  Window1.once("tauri://created", () => {
+    console.log("new window created");
+  });
+
+  Window1.once("tauri://error", function (e) {
+    // an error happened creating the window
+    console.error(e);
+  });
 };
 </script>
