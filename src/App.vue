@@ -1,7 +1,7 @@
 <template>
     <div>
         <!-- <RouterView /> -->
-        <ConfigProvider :locale="zhCN" >
+        <ConfigProvider :locale="zhCN" :theme="{ algorithm: isDarkMode ? darkAlgorithm : defaultAlgorithm }">
             <layout />
         </ConfigProvider>
 
@@ -11,31 +11,13 @@
 <script lang="ts" setup>
 // import { RouterView } from 'vue-router'
 import layout from './layout/layout.vue';
-import { ConfigProvider } from 'ant-design-vue'
+import { ConfigProvider ,theme  } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
+import { useThemeStore } from '@/store/theme'
+import { computed } from 'vue';
 
-// const themes = {
-//     algorithm: theme.darkAlgorithm,
-//     components: {
-//         Layout: {
-//             siderBg: '#141414',
-//             headerBg: '#141414',
-//             bodyBg: "#141414",
-//             colorText: "#fff"
-//         },
-//         // Menu: {
-//         //     // darkItemColor: "#fff",
-//         //     darkItemBg: '#141414',
-//         //     // darkItemHoverColor: "#fff",
-//         //     darkItemHoverBg: "#333",
-//         //     itemActiveBg: "#00513b"
-//         // }
-//     },
-//     token: {
-//         // colorPrimary: '#00a47a',
-//         // colorPrimaryBg: "#141414", // '#2c2c2c',
-//         // colorText: "rgba(255,255,255,0.65)",
-//         // colorTextDescription: "rgba(255,255,255,0.65)"
-//     },
-// }
+const { defaultAlgorithm, darkAlgorithm } = theme;
+
+const useTheme = useThemeStore()
+const isDarkMode = computed(() => useTheme.isDarkMode)
 </script>

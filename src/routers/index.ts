@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from "vue-router";
+import { createWebHashHistory, createRouter } from "vue-router";
 import {
   UserOutlined,
   VideoCameraOutlined,
@@ -11,9 +11,28 @@ export const routes = [
     path: "/",
     name: "Home",
     label: "首页",
-    icon: HomeOutlined ,
+    icon: HomeOutlined,
     component: () => import("@/views/home/index.vue"),
   },
+  {
+    name: "文章",
+    label: "文章",
+    path: "/article",
+    icon: UploadOutlined,
+    component: () => import("@/views/article/index.vue"),
+  },
+  {
+    name: "文章详情",
+    label: "文章详情",
+    path: "/article/detail",
+    icon: UploadOutlined,
+    component: () => import("@/views/article/detail.vue"),
+    meta: {
+      hideLayout: true, // 隐藏layout
+      hideMenu: true,  // 隐藏菜单
+    },
+  },
+
   {
     name: "Cpal",
     label: "降噪",
@@ -39,7 +58,7 @@ export const routes = [
 
 
 export const router = createRouter({
-  history: createMemoryHistory(),
+  history: createWebHashHistory(),
   routes,
 });
 
