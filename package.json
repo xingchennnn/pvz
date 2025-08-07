@@ -2,7 +2,7 @@
   "name": "pvz",
   "productName": "植物大战僵尸杂交版V3.9",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "i": "npm install",
@@ -12,7 +12,8 @@
     "tauri": "tauri dev",
     "tauri:prod": "tauri build  -- --release",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:macOs:dmg": "tauri build -- --bundles dmg"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
