@@ -7,3 +7,11 @@ export function getArticleList(params: any) {
         params
     });
 }
+
+export function getArticleDetail(params: any) {
+    return request({
+        url: '/getInfo',
+        method: 'get',
+        params
+    });
+}

@@ -20,3 +20,15 @@ body {
   color: var(--text-color);
   transition: background 0.3s, color 0.3s;
 }
+
+/* 滚动条优化 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #999;
+  border-radius: 4px;
+}

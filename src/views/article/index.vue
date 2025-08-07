@@ -83,7 +83,7 @@ const handleView = (record: any) => {
     const webviewWindow1 = new WebviewWindow("articleDetail", {
         title: '文章详情',
         url: '/#/article/detail?id=' + record.contentId,
-        width: 1000,
+        width: 800,
         height: 800,
         center: true,
     });
