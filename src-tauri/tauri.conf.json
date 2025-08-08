@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "PVZ_Hybrid",
+  "productName": "star",
   "identifier": "top.goteam",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Hybrid_Tool",
+        "title": "star",
         "width": 750,
         "height": 500,
         "center": true,

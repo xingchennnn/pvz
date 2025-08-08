@@ -2,12 +2,12 @@
   <router-view v-slot="{ Component, route }">
     <a-layout class="h-100vh" v-if="!route.meta.hideLayout">
       <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible :theme="useTheme">
-        <div class="logo flex justify-start items-center h-[var(--logo-height)] px-2">
-          <img src="@/assets/trans_bg_.png" alt="logo" class="h-100%" />
-          <span class="flex fw-bold c-[var(--text-color)]" v-show="!collapsed">STAR</span>
-        </div>
+        <!-- <div class="logo flex justify-start items-center h-[var(--logo-height)] px-2"> -->
+          <!-- <img src="@/assets/trans_bg.png" alt="logo" class="h-100%" /> -->
+          <!-- <span class="flex fw-bold c-[var(--text-color)]" v-show="!collapsed">STAR</span> -->
+        <!-- </div> -->
         <a-menu v-model:selectedKeys="selectedKeys" :theme="useTheme" mode="inline"
-          class="!h-[calc(100%-var(--logo-height)-20px)]">
+          class="!h-[calc(100%-20px)]">
           <template v-for="item in routerList" :key="item.path">
             <a-menu-item v-if="!item.meta || !item.meta.hideMenu" :key="item.path"
               @click="() => router.push(item.path)">
@@ -17,7 +17,7 @@
           </template>
         </a-menu>
         <div :class="collapsed ? 'transform-scale-70' : ''"
-          class="flex justify-center items-center h-20px py-4px c-[var(--text-color)]">
+          class="flex justify-center items-center h-20px py-4px c-[var(--text-color)] border-[1px solid var(--border-color)]">
           <DashboardOutlined />
           <span class="font-bold mx-5px" title="内存占用">{{ useMemory }}</span>
           <span class="">MB</span>
