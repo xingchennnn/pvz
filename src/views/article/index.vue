@@ -1,21 +1,5 @@
 <template>
     <div>
-        <a-card class="w-full">
-            <a-form>
-                <a-row :gutter="16">
-                    <a-col :span="4">
-                        <a-form-item label="文章标题">
-                            <a-input v-model:value="queryParam.title" placeholder="请输入文章标题" />
-                        </a-form-item>
-                    </a-col>
-                </a-row>
-                <a-row :gutter="16">
-                    <a-col :span="24">
-                        <a-button type="primary" @click="getLists">搜索</a-button>
-                    </a-col>
-                </a-row>
-            </a-form>
-        </a-card>
         <a-table :columns="columns" :data-source="articleList" bordered :loading="loading" :pagination="false"
             resizable row-class-name="row-class-name">
             <template #bodyCell="{ column, record }">
