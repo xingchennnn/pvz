@@ -56,6 +56,12 @@
           "width": 660
         }
       }
+    },
+    "windows": {
+      "nsis": null,
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      }
     }
   }
 }

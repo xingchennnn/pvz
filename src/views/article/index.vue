@@ -1,5 +1,21 @@
 <template>
     <div>
+        <a-card class="w-full">
+            <a-form>
+                <a-row :gutter="16">
+                    <a-col :span="4">
+                        <a-form-item label="文章标题">
+                            <a-input v-model:value="queryParam.title" placeholder="请输入文章标题" />
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="16">
+                    <a-col :span="24">
+                        <a-button type="primary" @click="getLists">搜索</a-button>
+                    </a-col>
+                </a-row>
+            </a-form>
+        </a-card>
         <a-table :columns="columns" :data-source="articleList" bordered :loading="loading" :pagination="false"
             resizable row-class-name="row-class-name">
             <template #bodyCell="{ column, record }">
@@ -15,6 +31,7 @@
             <a-pagination v-model:current="queryParam.pageNum" v-model:page-size="queryParam.pageSize" :total="total"
                 :show-total="(total: number) => `共${total}条`" @change="getLists" />
         </div>
+        <detail ref="detailRef" />
     </div>
 </template>
 
@@ -22,7 +39,11 @@
 import { getArticleList } from '@/api/article';
 import { message } from 'ant-design-vue';
 import { onMounted, reactive, ref } from 'vue';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+// import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import detail from './detail.vue';
+
+
+const detailRef = ref<InstanceType<typeof detail>>();
 
 const articleList = ref(); // 文章列表
 
@@ -31,6 +52,7 @@ const total = ref(0); // 总页数
 const queryParam = reactive({
     pageNum: 1,
     pageSize: 10,
+    title: undefined,
     siteId: 35,  // 站点ID  --死参数
     channelId: 2201,  // 频道ID  --死参数
 })
@@ -42,7 +64,7 @@ const getLists = () => {
     getArticleList(queryParam).then((res: any) => {
         articleList.value = res.rows;
         total.value = res.total;
-    }).catch(err => {
+    }).catch((err:any) => {
         console.log(err);
         message.error(err.message);
     }).finally(() => {
@@ -79,23 +101,27 @@ const columns = [
 
 const handleView = (record: any) => {
     // 这里是详情页的逻辑
-    console.log(record);
-    const webviewWindow1 = new WebviewWindow("articleDetail", {
-        title: '文章详情',
-        url: '/#/article/detail?id=' + record.contentId,
-        width: 800,
-        height: 800,
-        center: true,
-    });
-    webviewWindow1.once('tauri://created', function () {
-        // webview successfully created
-        console.log('webview created');
 
-    });
-    webviewWindow1.once('tauri://error', function (e) {
-        // an error happened creating the webview
-        console.log('webview error', e);
-    });
+    detailRef.value?.openModal(record.contentId);
+
+
+    // console.log(record);
+    // const webviewWindow1 = new WebviewWindow("articleDetail", {
+    //     title: '文章详情',
+    //     url: '/#/article/detail?id=' + record.contentId,
+    //     width: 800,
+    //     height: 800,
+    //     center: true,
+    // });
+    // webviewWindow1.once('tauri://created', function () {
+    //     // webview successfully created
+    //     console.log('webview created');
+
+    // });
+    // webviewWindow1.once('tauri://error', function (e) {
+    //     // an error happened creating the webview
+    //     console.log('webview error', e);
+    // });
 }
 
 const handleWord = (record: any) => {
