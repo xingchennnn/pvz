@@ -1,8 +1,8 @@
 {
   "name": "pvz",
-  "productName": "植物大战僵尸杂交版V3.9",
+  "productName": "pvz v3.9",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "scripts": {
     "i": "npm install",
