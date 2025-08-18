@@ -67,7 +67,7 @@ const openListener = async (open: boolean) => {
 const createWindow = () => {
   const Window1 = new WebviewWindow("cpal-detail", {
     url: "#/cpal/detail",
-    title: "详情",
+    title: "示例弹窗代码",
     width: 800,
     height: 600,
     center: true,
