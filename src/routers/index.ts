@@ -41,6 +41,17 @@ export const routes = [
     component: () => import("@/views/cpal/index.vue"),
   },
   {
+    name: "降噪详情",
+    label: "降噪详情",
+    path: "/cpal/detail",
+    icon: UploadOutlined,
+    component: () => import("@/views/cpal/detail.vue"),
+    meta: {
+      hideLayout: true, // 隐藏layout
+      hideMenu: true,  // 隐藏菜单
+    },
+  },
+  {
     name: "pvz",
     label: "萌新",
     path: "/pvz",
