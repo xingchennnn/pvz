@@ -3006,10 +3006,12 @@ version = "0.1.2"
 dependencies = [
  "cpal",
  "lazy_static",
+ "ndarray",
  "once_cell",
  "onnxruntime",
  "ringbuf",
  "rubato",
+ "rustfft",
  "serde",
  "serde_json",
  "tauri",

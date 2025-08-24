@@ -8,7 +8,7 @@
     <a-button
       v-if="!isListenerOpen"
       @click="openListener(true)"
-      :class="`ml-10px ${isopen ? '' : '!bg-gray-200'}`"
+      :class="`ml-10px ${isopen ? '' : '!bg-gray-400'}`"
       type="primary"
       :disabled="!isopen"
       >开启监听</a-button
@@ -16,7 +16,7 @@
     <a-button v-else @click="openListener(false)" class="ml-10px"
       >关闭监听</a-button
     >
-    <a-button @click="createWindow">打开一个新窗口</a-button>
+    <!-- <a-button @click="createWindow">打开一个新窗口</a-button> -->
   </div>
 </template>
 
@@ -65,6 +65,7 @@ const openListener = async (open: boolean) => {
 
 /**新窗口 */
 const createWindow = () => {
+  createWindow
   const Window1 = new WebviewWindow("cpal-detail", {
     url: "#/cpal/detail",
     title: "示例弹窗代码",
