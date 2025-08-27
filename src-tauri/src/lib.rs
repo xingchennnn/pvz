@@ -1,5 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-
+mod pos;
 mod memory;
 mod utils;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -178,7 +178,8 @@ pub fn run() {
             audio::device::stop_noise_reduction,
             audio::device::open_listener,
             audio::device::close_listener,
-            audio::device::on_install_vbcable // audio::device::get_listener_status,
+            audio::device::on_install_vbcable, // audio::device::get_listener_status,
+            pos::index::get_all_windows
         ])
         .run(tauri::generate_context!())
         .expect("启动失败");

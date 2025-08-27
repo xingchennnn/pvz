@@ -65,6 +65,13 @@ export const routes = [
     icon: UserOutlined,
     component: () => import("@/views/about/index.vue"),
   },
+  {
+    name: "窗口位置",
+    label: "窗口位置",
+    path: "/windowPos",
+    icon: UploadOutlined,
+    component: () => import("@/views/windowPos/index.vue"),
+  }
 ];
 
 
