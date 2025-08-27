@@ -75,8 +75,9 @@ function getDetail(articleId: string) {
 const replaceImgUrl = (content: string) => {
   const imgReg = /<img.*?src=[\'"](.*?)[\'"].*?>/g;
 
-  const newContent = content.replace(imgReg, (_match, src) => {
-    return `<img style="width:80%;" src="https://www.cqgh.org/guns/sysFileInfo/private/huaweiPreview?fileLocation=7&filePath=wangzhan${src}" alt="" />`;
+  const newContent = content.replace(imgReg, (_match, _src) => {
+    // return `<img style="width:80%;" src="https://www.cqgh.org/guns/sysFileInfo/private/huaweiPreview?fileLocation=7&filePath=wangzhan${src}" alt="" />`;
+    return '';
   });
 
   return newContent;
