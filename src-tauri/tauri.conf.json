@@ -55,10 +55,7 @@
       }
     },
     "windows": {
-      "nsis": null,
-      "webviewInstallMode": {
-        "type": "offlineInstaller"
-      }
+      "nsis": null
     }
   }
 }
