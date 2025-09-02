@@ -1,7 +1,7 @@
 <template>
   <div>
     <h2 class="text-lg font-bold mb-2">窗口列表</h2>
-    <a-card class="w-full h-70px mb-3">
+    <a-card class="w-full  mb-3">
       <div class="flex justify-start items-center gap-1">
         <a-input
           v-model:value="searchText"
@@ -10,7 +10,7 @@
           class="w-240px"
         ></a-input>
         <a-button type="primary" @click="searchWindows">搜索</a-button>
-        <a-button type="primary" @click="refreshWindows">刷新</a-button>
+        <a-button  @click="refreshWindows">刷新</a-button>
       </div>
     </a-card>
     <ul class="list-none p-0" role="listbox" aria-multiselectable="true">
@@ -18,7 +18,7 @@
         v-for="(win, index) in windows"
         :key="index"
         :class="[
-          'border border-solid border-transparent bg-[var(--text-color)] c-[var(--bg-color)] p-1 mb-2 rounded flex flex-col cursor-pointer hover:bg-[#f0f0f0] transition-all duration-200',
+          'border border-solid border-transparent bg-[var(--bg-color)] c-[var(--text-color)] p-1 mb-2 rounded flex flex-col cursor-pointer hover:bg-[var(--hover-color)] transition-all duration-200',
           win.isActive
             ? 'bg-[#e6f4ff] border-[#1677ff] shadow-[0_0_0_2px_rgba(22,119,255,0.2)]'
             : '',

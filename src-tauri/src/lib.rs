@@ -142,34 +142,34 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            let quit_i = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let show_i = MenuItem::with_id(app, "show", "显示主界面", true, None::<&str>)?;
+        // .setup(|app| {
+        //     let quit_i = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+        //     let show_i = MenuItem::with_id(app, "show", "显示主界面", true, None::<&str>)?;
 
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+        //     let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
-            let _tray = TrayIconBuilder::new()
-                .icon(Image::from_path("icons/32x32.png")?) // 设置托盘图标路径
-                .title("star tools")
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        println!("退出按钮点击");
-                        app.exit(0);
-                    }
-                    "show" => {
-                        println!("显示主界面");
-                        // Show the main window
+        //     let _tray = TrayIconBuilder::new()
+        //         .icon(Image::from_path("icons/32x32.png")?) // 设置托盘图标路径
+        //         .title("star tools")
+        //         .menu(&menu)
+        //         .show_menu_on_left_click(false)
+        //         .on_menu_event(|app, event| match event.id.as_ref() {
+        //             "quit" => {
+        //                 println!("退出按钮点击");
+        //                 app.exit(0);
+        //             }
+        //             "show" => {
+        //                 println!("显示主界面");
+        //                 // Show the main window
                     
-                    }
-                    _ => {
-                        println!("menu item {:?} not handled", event.id);
-                    }
-                })
-                .build(app)?;
-            Ok(())
-        })
+        //             }
+        //             _ => {
+        //                 println!("menu item {:?} not handled", event.id);
+        //             }
+        //         })
+        //         .build(app)?;
+        //     Ok(())
+        // })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
