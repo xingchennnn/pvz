@@ -10,7 +10,7 @@
     "vite:build": "vite build",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri dev",
+    "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:macOs:dmg": "tauri build -- --bundles dmg"
   },

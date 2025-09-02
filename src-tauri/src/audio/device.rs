@@ -232,7 +232,7 @@ pub fn open_listener() -> String {
     }
     "降噪线程未启动".into()
 }
-
+/**关闭监听 */
 #[tauri::command]
 pub fn close_listener() -> String {
     let thread_cell = AUDIO_THREAD.get_or_init(|| Arc::new(Mutex::new(None)));
@@ -244,6 +244,7 @@ pub fn close_listener() -> String {
     "降噪线程未启动".into()
 }
 
+/**停止降噪 */
 #[tauri::command]
 pub fn stop_noise_reduction() -> String {
     let thread_cell = AUDIO_THREAD.get_or_init(|| Arc::new(Mutex::new(None)));
@@ -262,7 +263,7 @@ pub fn stop_noise_reduction() -> String {
 }
 
 /**安装虚拟麦克风 */
-
+#[warn(dead_code)]
 fn install_vbcable() -> String {
     // let installer = Path::new("VBCABLE_Setup_x64.exe");
     // if !installer.exists() {
@@ -280,11 +281,12 @@ fn install_vbcable() -> String {
     //         "-Wait",
     //     ])
     //     .status().expect("安装失败，请确认是否以管理员身份运行，并手动安装驱动");
-
+    let _installed = check_vbcable_installed();
     "✅ 安装成功".into()
 }
 
 // 检查设备是否安装成功（示例：列出音频设备名称）
+#[warn(dead_code)]
 fn check_vbcable_installed() -> String {
     let host = cpal::default_host();
     for dev in host.output_devices().expect("获取输出设备失败") {
@@ -307,5 +309,6 @@ pub fn on_install_vbcable() -> String {
     // } else {
     //     eprintln!("❌ 安装失败，请确认是否以管理员身份运行，并手动安装驱动");
     // }
+    install_vbcable();
     "安装成功".into()
 }

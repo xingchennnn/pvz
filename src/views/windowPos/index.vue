@@ -55,7 +55,7 @@ const getAllWindows = async () => {
 
   windows_copy = windows_copy.filter((win: any) => {
     return (
-      ["IME", "MSCTFIME UI", "BroadcastListenerWindow"].includes(
+      ["IME", "MSCTFIME UI", "BroadcastListenerWindow",'Window'].includes(
         win.class_name
       ) === false
     );
@@ -90,7 +90,7 @@ const setActiveWindow = async (win: any, index: number) => {
     uFlags: 3, // SWP_NOSIZE -  | SWP_NOMOVE
   });
 
-  
+
 };
 
 onMounted(async () => {

@@ -2,7 +2,7 @@ use windows::{
     // core::PCWSTR,
     Win32::Foundation::HWND,
     Win32::UI::WindowsAndMessaging::{
-        EnumWindows, FindWindowW, GetClassNameW, GetDesktopWindow, SetWindowPos,
+        EnumWindows, GetClassNameW, SetWindowPos,
     },
 };
 
