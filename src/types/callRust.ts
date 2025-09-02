@@ -11,3 +11,10 @@ export enum callRustType {
 export enum cpalType {
     getDefaultAudioDevice = "getDefaultAudioDevice", // 获取默认音频设备
 }
+
+export enum windowPosType {
+    /** 获取窗口句柄列表 */
+    GETALLWINDOWS = "get_all_windows", 
+    /** 设置窗口置顶 */
+    SETWINDOWPOS = "set_window_pos_command", 
+}   

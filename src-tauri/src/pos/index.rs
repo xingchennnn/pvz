@@ -106,7 +106,7 @@ pub fn set_window_pos_command(
         let hwnd_param = HWND(hwnd);
         let insert_after_param = HWND(insert_after);
 
-        let _ = SetWindowPos(
+        let _bool = SetWindowPos(
             hwnd_param,
             insert_after_param,
             x as i32,
@@ -115,5 +115,13 @@ pub fn set_window_pos_command(
             cy as i32,
             windows::Win32::UI::WindowsAndMessaging::SET_WINDOW_POS_FLAGS(u_flags),
         );
+        match _bool {
+            Ok(_) => {
+                println!("设置窗口位置成功");
+            }
+            Err(e) => {
+                println!("设置窗口位置失败 {:?}", e);
+            }
+        };
     }
 }
