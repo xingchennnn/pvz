@@ -179,7 +179,8 @@ pub fn run() {
             audio::device::open_listener,
             audio::device::close_listener,
             audio::device::on_install_vbcable, // audio::device::get_listener_status,
-            pos::index::get_all_windows
+            pos::index::get_all_windows ,
+            pos::index::set_window_pos_command
         ])
         .run(tauri::generate_context!())
         .expect("启动失败");

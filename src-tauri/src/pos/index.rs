@@ -1,5 +1,6 @@
 use windows::{
     // core::PCWSTR,
+    Win32::Foundation::HWND,
     Win32::UI::WindowsAndMessaging::{
         EnumWindows, FindWindowW, GetClassNameW, GetDesktopWindow, SetWindowPos,
     },
@@ -87,4 +88,32 @@ fn enum_windows_vec() -> Vec<WindowInfo> {
     }
 
     all_top_window
+}
+
+#[tauri::command]
+pub fn set_window_pos_command(
+    hwnd: isize,
+    insert_after: isize,
+    x: isize,
+    y: isize,
+    cx: isize,
+    cy: isize,
+    u_flags: u32,
+) {
+    println!("hwnd {}, insertafter {} x {} y {} cx {} cy {} uFlags {}", hwnd, insert_after, x, y, cx, cy, u_flags);
+    unsafe {
+        // 将 isize 转为 HWND，满足 SetWindowPos 的 IntoParam<HWND> 约束
+        let hwnd_param = HWND(hwnd);
+        let insert_after_param = HWND(insert_after);
+
+        let _ = SetWindowPos(
+            hwnd_param,
+            insert_after_param,
+            x as i32,
+            y as i32,
+            cx as i32,
+            cy as i32,
+            windows::Win32::UI::WindowsAndMessaging::SET_WINDOW_POS_FLAGS(u_flags),
+        );
+    }
 }
