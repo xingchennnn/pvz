@@ -6,7 +6,7 @@
     keyboard
     destroyOnClose
     @ok="handleOk"
-    width="30%"
+    width="50%"
     okText="打印"
     :confirm-loading="printLoading"
   >

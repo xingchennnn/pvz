@@ -6,7 +6,7 @@
                 <template v-if="column.key === 'action'">
                     <div class="flex justify-center items-center min-w-130px w-130px">
                         <a-button type="link" @click="handleView(record)">详情</a-button>
-                        <a-button type="link" @click="handleWord(record)">word查看</a-button>
+                        <!-- <a-button type="link" @click="handleWord(record)">word查看</a-button> -->
                     </div>
                 </template>
             </template>
@@ -78,6 +78,7 @@ const columns = [
         key: 'action',
         width: '20%',
         ellipsis: true,
+        align: 'center',
         fixed: 'right',
     },
 ];

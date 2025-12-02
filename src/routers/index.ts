@@ -1,9 +1,12 @@
 import { createWebHashHistory, createRouter } from "vue-router";
 import {
   UserOutlined,
-  VideoCameraOutlined,
   UploadOutlined,
-  HomeOutlined
+  HomeOutlined,
+  BookOutlined,
+  AudioOutlined,
+  SettingOutlined,
+  RedditOutlined
 } from "@ant-design/icons-vue";
 
 export const routes = [
@@ -18,14 +21,14 @@ export const routes = [
     name: "文章",
     label: "文章",
     path: "/article",
-    icon: UploadOutlined,
+    icon: BookOutlined,
     component: () => import("@/views/article/index.vue"),
   },
   {
     name: "文章详情",
     label: "文章详情",
     path: "/article/detail",
-    icon: UploadOutlined,
+    icon: BookOutlined,
     component: () => import("@/views/article/detail.vue"),
     meta: {
       hideLayout: true, // 隐藏layout
@@ -44,7 +47,7 @@ export const routes = [
     name: "降噪详情",
     label: "降噪详情",
     path: "/cpal/detail",
-    icon: UploadOutlined,
+    icon: AudioOutlined ,
     component: () => import("@/views/cpal/detail.vue"),
     meta: {
       hideLayout: true, // 隐藏layout
@@ -53,9 +56,9 @@ export const routes = [
   },
   {
     name: "pvz",
-    label: "萌新",
+    label: "植物大战僵尸",
     path: "/pvz",
-    icon: VideoCameraOutlined,
+    icon: RedditOutlined,
     component: () => import("@/views/pvz/index.vue"),
   },
   {
@@ -71,6 +74,13 @@ export const routes = [
     path: "/windowPos",
     icon: UploadOutlined,
     component: () => import("@/views/windowPos/index.vue"),
+  },
+  {
+    name: "设置",
+    label: "设置",
+    path: "/settings",
+    icon: SettingOutlined,
+    component: () => import("@/views/settings/index.vue"),
   }
 ];
 

@@ -4,7 +4,6 @@
         <ConfigProvider :locale="zhCN" :theme="{ algorithm: isDarkMode ? darkAlgorithm : defaultAlgorithm }">
             <layout />
         </ConfigProvider>
-
     </div>
 </template>
 

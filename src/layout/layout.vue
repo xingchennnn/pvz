@@ -2,12 +2,7 @@
   <router-view v-slot="{ Component, route }">
     <a-layout class="h-100vh" v-if="!route.meta.hideLayout">
       <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible :theme="useTheme">
-        <!-- <div class="logo flex justify-start items-center h-[var(--logo-height)] px-2"> -->
-          <!-- <img src="@/assets/trans_bg.png" alt="logo" class="h-100%" /> -->
-          <!-- <span class="flex fw-bold c-[var(--text-color)]" v-show="!collapsed">STAR</span> -->
-        <!-- </div> -->
-        <a-menu v-model:selectedKeys="selectedKeys" :theme="useTheme" mode="inline"
-          class="!h-[calc(100%-20px)]">
+        <a-menu v-model:selectedKeys="selectedKeys" :theme="useTheme" mode="inline" class="!h-[calc(100%-20px)]">
           <template v-for="item in routerList" :key="item.path">
             <a-menu-item v-if="!item.meta || !item.meta.hideMenu" :key="item.path"
               @click="() => router.push(item.path)">
