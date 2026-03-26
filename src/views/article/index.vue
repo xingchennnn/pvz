@@ -109,10 +109,10 @@ const handleView = (record: any) => {
     // });
 }
 
-const handleWord = (record: any) => {
-    // 这里是word查看的逻辑
-    console.log(record);
-}
+// const handleWord = (record: any) => {
+//     // 这里是word查看的逻辑
+//     console.log(record);
+// }
 
 
 onMounted(() => {

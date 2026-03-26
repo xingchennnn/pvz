@@ -11,13 +11,10 @@ use ringbuf::{
 // use std::sync::{Arc, Mutex};
 mod audio;
 
-// Add this import for TrayIconBuilder
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
-};
-// 托盘图标
-use tauri::image::Image;
+#[allow(deprecated)]
+fn cpal_device_name(device: &cpal::Device) -> String {
+    device.name().unwrap_or_else(|_| "未知设备".to_string())
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -56,7 +53,7 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
             let output_device = host.default_output_device().expect("没有默认输出设备");
             println!(
                 "默认音频输出设备: {}",
-                output_device.clone().name().unwrap()
+                cpal_device_name(&output_device)
             );
             let output_config = output_device
                 .default_output_config()
@@ -64,7 +61,7 @@ fn call_rust(types: &str, text: &str) -> std::string::String {
 
             //  获取默认输入设备
             let input_device = host.default_input_device().expect("没有默认输入设备");
-            println!("默认音频输入设备: {}", input_device.clone().name().unwrap());
+            println!("默认音频输入设备: {}", cpal_device_name(&input_device));
             //  获取默认输入配置
             let input_config = input_device
                 .default_input_config()
@@ -178,6 +175,8 @@ pub fn run() {
             audio::device::stop_noise_reduction,
             audio::device::open_listener,
             audio::device::close_listener,
+            audio::device::list_audio_devices,
+            audio::device::get_audio_status,
             audio::device::on_install_vbcable, // audio::device::get_listener_status,
             pos::index::get_all_windows ,
             pos::index::set_window_pos_command

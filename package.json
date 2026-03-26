@@ -10,9 +10,10 @@
     "vite:build": "vite build",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "tauri:build:macOs:dmg": "tauri build -- --bundles dmg"
+    "tauri:dev": "node scripts/run-tauri.mjs dev",
+    "tauri:dev:new":"tauri dev",
+    "tauri:build": "node scripts/run-tauri.mjs build",
+    "tauri:build:macOs:dmg": "node scripts/run-tauri.mjs build -- --bundles dmg"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
