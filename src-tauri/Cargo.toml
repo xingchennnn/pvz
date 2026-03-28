@@ -4,6 +4,7 @@ version = "0.1.2"
 description = "植物大战僵尸杂交版V3.9的外挂rust实现"
 authors = ["you"]
 edition = "2021"
+default-run = "pvz"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -34,7 +35,5 @@ cpal = "0.17.3" #音频播放库
 ringbuf = "0.4.8" #环形缓冲区 音频依赖
 lazy_static = "1.5.0" #懒加载静态变量
 once_cell = "1.21.4" #懒加载静态变量
-onnxruntime = "0.0.14"
-rubato = "1.0.1" 
-rustfft = "6.4.1"
+nnnoiseless = { version = "0.5.2", default-features = false }
 

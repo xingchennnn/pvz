@@ -4,6 +4,8 @@ export enum StorageKeys {
     USER_INFO = 'USER_INFO',
     /**页面配置 暗色模式 */
     PAGE_CONFIG_DARK_MODE = 'PAGE_CONFIG_DARK_MODE',
+    /**音频路由选择 */
+    AUDIO_ROUTE_SELECTION = 'AUDIO_ROUTE_SELECTION',
 }
 
 

@@ -21,9 +21,8 @@
     "noFallthroughCasesInSwitch": true,
 
     /* @ 规则*/
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["node" ]
 
