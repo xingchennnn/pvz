@@ -122,16 +122,19 @@ pub fn cooling() -> Result<String, MemoryError> {
 /** 获取植物大战僵尸杂交版v3.9的进程id */
 fn get_pid() -> u32 {
     let find_name = "植物大战僵尸杂交版v3.9              ";
-    let hwnd;
+    let class_name = str_to_pcwstr("MainWindow");
+    let window_name = str_to_pcwstr(find_name);
+
     // findWindowW 找到窗口句柄
-    unsafe {
-        hwnd = FindWindowW(
-            PCWSTR::from_raw(str_to_pcwstr("MainWindow").as_ptr()),
-            PCWSTR::from_raw(str_to_pcwstr(find_name).as_ptr()),
-        );
-        if hwnd.0 == 0 {
-            // println!("未找到窗口");
-            return 2;
+    let hwnd = unsafe {
+        match FindWindowW(
+            PCWSTR::from_raw(class_name.as_ptr()),
+            PCWSTR::from_raw(window_name.as_ptr()),
+        ) {
+            Ok(hwnd) => hwnd,
+            Err(_) => {
+                return 2;
+            }
         }
     };
 
@@ -139,7 +142,7 @@ fn get_pid() -> u32 {
     let mut process_id = 0;
 
     unsafe {
-        GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+        GetWindowThreadProcessId(hwnd, Some(&mut process_id as *mut u32));
     }
 
     // 如果进程id为0，说明未获取到窗口进程id

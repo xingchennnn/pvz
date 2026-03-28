@@ -1,8 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, Stream, StreamConfig, SupportedStreamConfig};
-use ndarray::Array3;
 use once_cell::sync::OnceCell;
-use onnxruntime::{environment::Environment, LoggingLevel};
+use onnxruntime::{environment::Environment, ndarray::Array3, LoggingLevel};
 use ringbuf::traits::{Consumer, Producer, Split};
 use ringbuf::HeapRb;
 use rustfft::{num_complex::Complex, FftPlanner};
@@ -552,7 +551,7 @@ pub fn start_noise_reduction() -> Result<String, String> {
             };
 
             let infer_started = Instant::now();
-            let outputs = session.run(vec![real.into_dyn(), imag.into_dyn()]);
+            let outputs = session.run(vec![real, imag]);
             let inference_micros = infer_started.elapsed().as_micros() as u64;
             thread_stats
                 .last_inference_micros

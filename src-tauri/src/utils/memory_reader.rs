@@ -46,7 +46,7 @@ impl MemoryReader {
         if bytes_read != size {
             return Err(windows::core::Error::new(
                 windows::core::HRESULT(0x400), // STATUS_BAD_LENGTH
-                "读取长度不完整".into(),
+                "读取长度不完整",
             ));
         }
 
@@ -74,7 +74,7 @@ impl MemoryReader {
         if bytes_written != size {
             return Err(windows::core::Error::new(
                 windows::core::HRESULT(0x400), // STATUS_BAD_LENGTH
-                "写入长度不完整".into(),
+                "写入长度不完整",
             ));
         }
 
@@ -98,7 +98,7 @@ impl MemoryReader {
         if bytes_written != data.len() {
             return Err(windows::core::Error::new(
                 windows::core::HRESULT(0x400), // STATUS_BAD_LENGTH
-                "写入长度不完整".into(),
+                "写入长度不完整",
             ));
         }
 

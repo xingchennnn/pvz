@@ -1,6 +1,7 @@
+use std::ffi::c_void;
 use windows::{
     // core::PCWSTR,
-    Win32::Foundation::HWND,
+    Win32::Foundation::{HWND, LPARAM},
     Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetClassNameW, SetWindowPos,
     },
@@ -53,9 +54,9 @@ fn enum_windows_vec() -> Vec<WindowInfo> {
     let mut all_top_window = Vec::new();
 
     unsafe extern "system" fn enum_windows_proc(
-        hwnd: windows::Win32::Foundation::HWND,
-        lparam: windows::Win32::Foundation::LPARAM,
-    ) -> windows::Win32::Foundation::BOOL {
+        hwnd: HWND,
+        lparam: LPARAM,
+    ) -> windows::core::BOOL {
         // 获取窗口标题长度
         let length = windows::Win32::UI::WindowsAndMessaging::GetWindowTextLengthW(hwnd);
         if length > 0 {
@@ -71,17 +72,17 @@ fn enum_windows_vec() -> Vec<WindowInfo> {
             // SAFETY: lparam is a pointer to Vec<WindowInfo>
             let all_top_window = &mut *(lparam.0 as *mut Vec<WindowInfo>);
             all_top_window.push(WindowInfo {
-                hwnd: hwnd.0,
+                hwnd: hwnd.0 as isize,
                 title,
                 class_name: String::from_utf16_lossy(&buffer[..class_name as usize]),
             });
         }
         // 继续枚举
-        windows::Win32::Foundation::BOOL(1)
+        true.into()
     }
 
     unsafe {
-        let lparam = windows::Win32::Foundation::LPARAM(
+        let lparam = LPARAM(
             &mut all_top_window as *mut Vec<WindowInfo> as isize,
         );
         let _ = EnumWindows(Some(enum_windows_proc), lparam);
@@ -103,8 +104,12 @@ pub fn set_window_pos_command(
     println!("hwnd {}, insertafter {} x {} y {} cx {} cy {} uFlags {}", hwnd, insert_after, x, y, cx, cy, u_flags);
     unsafe {
         // 将 isize 转为 HWND，满足 SetWindowPos 的 IntoParam<HWND> 约束
-        let hwnd_param = HWND(hwnd);
-        let insert_after_param = HWND(insert_after);
+        let hwnd_param = HWND(hwnd as *mut c_void);
+        let insert_after_param = if insert_after == 0 {
+            None
+        } else {
+            Some(HWND(insert_after as *mut c_void))
+        };
 
         let _bool = SetWindowPos(
             hwnd_param,

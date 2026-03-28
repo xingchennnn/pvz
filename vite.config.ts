@@ -5,7 +5,7 @@ import { AntDesignVueResolver } from "unplugin-vue-components/resolvers";
 import UnoCSS from "unocss/vite";
 import { resolve } from "path";
 
-//  process is a nodejs global
+// process 是 Node.js 的全局对象
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
@@ -16,18 +16,18 @@ export default defineConfig(async () => ({
       //  自动导入组件
       resolvers: [
         AntDesignVueResolver({
-          importStyle: false, // css in js
+          importStyle: false, // 在 JS 中引入 CSS
         }),
       ],
     }),
     UnoCSS(),
   ],
 
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+  // 为 Tauri 开发定制的 Vite 配置，仅在 `tauri dev` 或 `tauri build` 时生效
   //
-  // 1. prevent vite from obscuring rust errors
+  // 1. 防止 Vite 清屏后遮挡 Rust 报错信息
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  // 2. Tauri 依赖固定端口，如果端口不可用则直接报错
   server: {
     port: 1420,
     strictPort: true,
@@ -40,7 +40,7 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
+      // 3. 告诉 Vite 忽略对 `src-tauri` 的监听
       ignored: ["**/src-tauri/**"],
     },
   },
