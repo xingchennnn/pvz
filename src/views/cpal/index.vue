@@ -1,228 +1,98 @@
 <template>
-  <div class="c-[var(--text-color)] text-18px font-600">降噪设置</div>
-  <div class="mt-12px flex flex-wrap gap-12px">
-    <a-button :loading="busy" @click="toggleOpenCpal" type="primary">
-      {{ status.running ? "停止降噪" : "开始降噪" }}
-    </a-button>
-    <a-button
-      :loading="busy"
-      @click="toggleListener(!status.listening)"
-      :disabled="!status.running || !routing.monitorOutputDeviceName"
-    >
-      {{ status.listening ? "关闭监听" : "开启监听" }}
-    </a-button>
-    <a-button :loading="loadingDevices" @click="refreshDevices">
-      刷新设备
-    </a-button>
-    <a-button :loading="busy" @click="refreshStatus">刷新状态</a-button>
-  </div>
+  <div class="cpal-page">
+    <CpalHeroCard
+      :status="status"
+      :busy="busy"
+      :loading-devices="loadingDevices"
+      :can-toggle-listener="status.running && !!routing.monitorOutputDeviceId"
+      @toggle-open-cpal="toggleOpenCpal"
+      @toggle-listener="toggleListener(!status.listening)"
+      @refresh-devices="refreshDevices"
+      @refresh-status="refreshStatus"
+    />
 
-  <div class="mt-16px grid gap-16px md:grid-cols-3">
-    <div class="rounded-10px border border-[#dbe2ea] p-14px">
-      <div class="mb-8px text-15px font-600">输入麦克风</div>
-      <a-select v-model:value="routing.inputDeviceName" class="w-full" placeholder="选择输入麦克风">
-        <a-select-option
-          v-for="device in compatibleInputs"
-          :key="`route-input-${device.name}`"
-          :value="device.name"
-        >
-          {{ device.name }}
-        </a-select-option>
-      </a-select>
-      <div class="mt-8px text-12px leading-20px text-[#6b7280]">
-        原始麦克风采集源。修改后需要重新启动降噪引擎。
-      </div>
-    </div>
+    <CpalVBCableCard
+      :vbcable="vbcable"
+      :vbcable-loading="vbcableLoading"
+      :vbcable-setup-file-name="vbcableSetupFileName"
+      @refresh-vbcable-status="refreshVBCableStatus"
+      @apply-vbcable-route="applyVBCableRecommendedRoute"
+      @open-vbcable-package-dir="openVBCablePackageDir"
+      @open-vbcable-control-panel="openVBCableControlPanel"
+      @open-vbcable-download-page="openVBCableDownloadPage"
+    />
 
-    <div class="rounded-10px border border-[#dbe2ea] p-14px">
-      <div class="mb-8px text-15px font-600">虚拟麦输出</div>
-      <a-select
-        v-model:value="routing.virtualOutputDeviceName"
-        class="w-full"
-        placeholder="选择虚拟麦输出设备"
-      >
-        <a-select-option
-          v-for="device in compatibleOutputs"
-          :key="`route-virtual-${device.name}`"
-          :value="device.name"
-        >
-          {{ device.name }}{{ device.virtual_mic_candidate ? " · 推荐" : "" }}
-        </a-select-option>
-      </a-select>
-      <div class="mt-8px text-12px leading-20px text-[#6b7280]">
-        处理后的声音会持续送到这里。若使用 VB-CABLE，应选择播放端 CABLE Input。
-      </div>
-    </div>
+    <CpalRoutingSection
+      :input-device-id="routing.inputDeviceId"
+      :virtual-output-device-id="routing.virtualOutputDeviceId"
+      :monitor-output-device-id="routing.monitorOutputDeviceId"
+      :input-options="inputOptions"
+      :virtual-output-options="virtualOutputOptions"
+      :monitor-output-options="monitorOptions"
+      @change-input-device-id="routing.inputDeviceId = $event"
+      @change-virtual-output-device-id="routing.virtualOutputDeviceId = $event"
+      @change-monitor-output-device-id="routing.monitorOutputDeviceId = $event"
+    />
 
-    <div class="rounded-10px border border-[#dbe2ea] p-14px">
-      <div class="mb-8px text-15px font-600">本地监听设备</div>
-      <a-select
-        v-model:value="routing.monitorOutputDeviceName"
-        class="w-full"
-        placeholder="可选，不监听可留空"
-      >
-        <a-select-option value="">不启用本地监听</a-select-option>
-        <a-select-option
-          v-for="device in monitorOutputOptions"
-          :key="`route-monitor-${device.name}`"
-          :value="device.name"
-        >
-          {{ device.name }}
-        </a-select-option>
-      </a-select>
-      <div class="mt-8px text-12px leading-20px text-[#6b7280]">
-        “开启监听”只控制这一路，不影响虚拟麦输出。
-      </div>
-    </div>
-  </div>
+    <CpalStatusMetricsSection :status="status" />
 
-  <div class="mt-16px rounded-10px border border-[#dbe2ea] bg-[#f9fafb] p-14px text-13px leading-22px text-[#374151]">
-    当前链路: 麦克风输入 -> RNNoise 处理 -> 虚拟麦输出设备。开启监听后，会额外复制一份到本地监听设备。
-  </div>
-
-  <div class="mt-16px rounded-10px bg-[#f5f7fa] p-14px text-14px leading-22px text-[#1f2937]">
-    <div>引擎状态: {{ status.running ? "已启动" : "未启动" }}</div>
-    <div>监听状态: {{ status.listening ? "已打开" : "已关闭" }}</div>
-    <div>模型目标采样率: {{ status.model_sample_rate }} Hz</div>
-    <div>当前采样率: {{ status.sample_rate || "未建立链路" }}</div>
-    <div>输入设备: {{ status.input_device_name || "未绑定" }}</div>
-    <div>虚拟麦输出: {{ status.virtual_output_device_name || "未绑定" }}</div>
-    <div>监听设备: {{ status.monitor_output_device_name || "未配置" }}</div>
-    <div>
-      输入格式: {{ status.input_sample_format || "-" }} / {{ status.input_channels || "-" }} 声道
-    </div>
-    <div>
-      虚拟麦格式: {{ status.virtual_output_sample_format || "-" }} / {{ status.virtual_output_channels || "-" }} 声道
-    </div>
-    <div>
-      监听格式: {{ status.monitor_output_sample_format || "-" }} / {{ status.monitor_output_channels || "-" }} 声道
-    </div>
-  </div>
-
-  <div class="mt-16px grid gap-16px md:grid-cols-2">
-    <div class="rounded-10px border border-[#dbe2ea] p-14px">
-      <div class="mb-8px text-15px font-600">输入设备兼容性</div>
-      <div class="text-12px text-[#6b7280]">
-        当前实现只接受可直接工作在 {{ status.model_sample_rate }} Hz 的设备。
-      </div>
-      <div v-if="catalog.inputs.length" class="mt-10px space-y-8px">
-        <div
-          v-for="device in catalog.inputs"
-          :key="`input-${device.name}`"
-          class="rounded-8px bg-[#f8fafc] px-10px py-8px text-13px"
-        >
-          <div class="font-600">{{ device.name }}</div>
-          <div>
-            状态: {{ device.compatible ? `支持 ${status.model_sample_rate}Hz 直连` : `不支持 ${status.model_sample_rate}Hz 直连` }}
-          </div>
-          <div>采样格式: {{ device.supported_sample_formats.join(" / ") || "无" }}</div>
-        </div>
-      </div>
-      <div v-else class="mt-10px text-13px text-[#6b7280]">暂无输入设备信息</div>
-    </div>
-
-    <div class="rounded-10px border border-[#dbe2ea] p-14px">
-      <div class="mb-8px text-15px font-600">输出设备兼容性</div>
-      <div class="text-12px text-[#6b7280]">
-        虚拟声卡播放端可作为“虚拟麦输出”，普通扬声器/耳机更适合作为“本地监听”。
-      </div>
-      <div v-if="catalog.outputs.length" class="mt-10px space-y-8px">
-        <div
-          v-for="device in catalog.outputs"
-          :key="`output-${device.name}`"
-          class="rounded-8px bg-[#f8fafc] px-10px py-8px text-13px"
-        >
-          <div class="font-600">{{ device.name }}</div>
-          <div>
-            状态: {{ device.compatible ? `支持 ${status.model_sample_rate}Hz 直连` : `不支持 ${status.model_sample_rate}Hz 直连` }}
-          </div>
-          <div>建议用途: {{ device.virtual_mic_candidate ? "优先作为虚拟麦输出" : "优先作为本地监听" }}</div>
-          <div>采样格式: {{ device.supported_sample_formats.join(" / ") || "无" }}</div>
-        </div>
-      </div>
-      <div v-else class="mt-10px text-13px text-[#6b7280]">暂无输出设备信息</div>
-    </div>
-  </div>
-
-  <div class="mt-16px rounded-10px border border-[#dbe2ea] p-14px text-13px leading-22px">
-    <div class="mb-8px text-15px font-600">运行指标</div>
-    <div>输入缓冲溢出: {{ status.stats.input_overflows }}</div>
-    <div>输出缓冲欠载: {{ status.stats.output_underflows }}</div>
-    <div>推理帧数: {{ status.stats.inference_frames }}</div>
-    <div>推理错误: {{ status.stats.inference_errors }}</div>
-    <div>平均推理耗时: {{ status.stats.average_inference_ms.toFixed(2) }} ms</div>
-    <div>最近一次推理耗时: {{ status.stats.last_inference_ms.toFixed(2) }} ms</div>
+    <CpalCompatibilitySection
+      :model-sample-rate="status.model_sample_rate"
+      :input-items="inputCompatibilityItems"
+      :output-items="outputCompatibilityItems"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { message } from "ant-design-vue";
 import { onMounted, onUnmounted, reactive, ref, watch, computed } from "vue";
 import { StorageKeys, StorageUtils } from "@/utils/storageUtils";
-
-type AudioStatsSnapshot = {
-  input_overflows: number;
-  output_underflows: number;
-  inference_frames: number;
-  inference_errors: number;
-  average_inference_ms: number;
-  last_inference_ms: number;
-};
-
-type AudioStatus = {
-  running: boolean;
-  listening: boolean;
-  sample_rate: number;
-  model_sample_rate: number;
-  input_device_name: string | null;
-  virtual_output_device_name: string | null;
-  monitor_output_device_name: string | null;
-  input_channels: number | null;
-  virtual_output_channels: number | null;
-  monitor_output_channels: number | null;
-  input_sample_format: string | null;
-  virtual_output_sample_format: string | null;
-  monitor_output_sample_format: string | null;
-  stats: AudioStatsSnapshot;
-};
-
-type AudioDeviceInfo = {
-  name: string;
-  compatible: boolean;
-  supported_sample_formats: string[];
-  virtual_mic_candidate: boolean;
-};
-
-type AudioDeviceCatalog = {
-  model_sample_rate: number;
-  default_input: string | null;
-  default_output: string | null;
-  preferred_virtual_output: string | null;
-  preferred_monitor_output: string | null;
-  inputs: AudioDeviceInfo[];
-  outputs: AudioDeviceInfo[];
-};
-
-type AudioRouteSelection = {
-  inputDeviceName: string;
-  virtualOutputDeviceName: string;
-  monitorOutputDeviceName: string;
-};
+import CpalCompatibilitySection from "./components/CpalCompatibilitySection.vue";
+import CpalHeroCard from "./components/CpalHeroCard.vue";
+import CpalRoutingSection from "./components/CpalRoutingSection.vue";
+import CpalStatusMetricsSection from "./components/CpalStatusMetricsSection.vue";
+import CpalVBCableCard from "./components/CpalVBCableCard.vue";
+import type {
+  AudioDeviceCatalog,
+  AudioDeviceInfo,
+  AudioDevicePanelItem,
+  AudioRouteSelection,
+  AudioSelectOption,
+  AudioStatus,
+  SavedAudioRouteSelection,
+  VBCableStatus,
+} from "./types";
 
 const loadSavedRouting = (): AudioRouteSelection => {
-  const saved = StorageUtils.getItem(StorageKeys.AUDIO_ROUTE_SELECTION) || {};
+  const saved = (StorageUtils.getItem(StorageKeys.AUDIO_ROUTE_SELECTION) || {}) as SavedAudioRouteSelection;
   return {
-    inputDeviceName: typeof saved.inputDeviceName === "string" ? saved.inputDeviceName : "",
-    virtualOutputDeviceName:
-      typeof saved.virtualOutputDeviceName === "string" ? saved.virtualOutputDeviceName : "",
-    monitorOutputDeviceName:
-      typeof saved.monitorOutputDeviceName === "string" ? saved.monitorOutputDeviceName : "",
+    inputDeviceId:
+      typeof saved.inputDeviceId === "string"
+        ? saved.inputDeviceId
+        : typeof saved.inputDeviceName === "string"
+          ? saved.inputDeviceName
+          : "",
+    virtualOutputDeviceId:
+      typeof saved.virtualOutputDeviceId === "string"
+        ? saved.virtualOutputDeviceId
+        : typeof saved.virtualOutputDeviceName === "string"
+          ? saved.virtualOutputDeviceName
+          : "",
+    monitorOutputDeviceId:
+      typeof saved.monitorOutputDeviceId === "string"
+        ? saved.monitorOutputDeviceId
+        : typeof saved.monitorOutputDeviceName === "string"
+          ? saved.monitorOutputDeviceName
+          : "",
   };
 };
 
 const busy = ref(false);
 const loadingDevices = ref(false);
+const vbcableLoading = ref(false);
 const status = reactive<AudioStatus>({
   running: false,
   listening: false,
@@ -248,12 +118,24 @@ const status = reactive<AudioStatus>({
 });
 const catalog = reactive<AudioDeviceCatalog>({
   model_sample_rate: 48000,
-  default_input: null,
-  default_output: null,
-  preferred_virtual_output: null,
-  preferred_monitor_output: null,
+  default_input_id: null,
+  default_output_id: null,
+  preferred_virtual_output_id: null,
+  preferred_monitor_output_id: null,
   inputs: [],
   outputs: [],
+});
+const vbcable = reactive<VBCableStatus>({
+  installed: false,
+  package_dir: null,
+  setup_path: null,
+  control_panel_path: null,
+  input_device_id: null,
+  input_device_name: null,
+  output_device_id: null,
+  output_device_name: null,
+  official_download_url: "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip",
+  integration_notice: "",
 });
 const routing = reactive<AudioRouteSelection>(loadSavedRouting());
 
@@ -262,13 +144,118 @@ let pollTimer: number | undefined;
 const compatibleInputs = computed(() => catalog.inputs.filter((device) => device.compatible));
 const compatibleOutputs = computed(() => catalog.outputs.filter((device) => device.compatible));
 const monitorOutputOptions = computed(() =>
-  compatibleOutputs.value.filter((device) => device.name !== routing.virtualOutputDeviceName),
+  compatibleOutputs.value.filter((device) => device.id !== routing.virtualOutputDeviceId),
 );
+
+const buildDeviceLabelMap = (devices: AudioDeviceInfo[]) => {
+  const baseLabels = devices.map((device) => {
+    const detail = typeof device.detail === "string" ? device.detail.trim() : "";
+    return detail && detail !== device.name ? `${device.name} · ${detail}` : device.name;
+  });
+  const totalByLabel = new Map<string, number>();
+  for (const label of baseLabels) {
+    totalByLabel.set(label, (totalByLabel.get(label) || 0) + 1);
+  }
+
+  const seenByLabel = new Map<string, number>();
+  return new Map(
+    devices.map((device, index) => {
+      const baseLabel = baseLabels[index];
+      const seen = (seenByLabel.get(baseLabel) || 0) + 1;
+      seenByLabel.set(baseLabel, seen);
+      const finalLabel =
+        (totalByLabel.get(baseLabel) || 0) > 1 ? `${baseLabel} (${seen})` : baseLabel;
+      return [device.id, finalLabel];
+    }),
+  );
+};
+
+const compatibleInputLabelMap = computed(() => buildDeviceLabelMap(compatibleInputs.value));
+const compatibleOutputLabelMap = computed(() => buildDeviceLabelMap(compatibleOutputs.value));
+const monitorOutputLabelMap = computed(() => buildDeviceLabelMap(monitorOutputOptions.value));
+const catalogInputLabelMap = computed(() => buildDeviceLabelMap(catalog.inputs));
+const catalogOutputLabelMap = computed(() => buildDeviceLabelMap(catalog.outputs));
+
+const getDeviceLabel = (device: AudioDeviceInfo, labelMap: Map<string, string>) =>
+  labelMap.get(device.id) || device.name;
+
+const inputDeviceOptionLabel = (device: AudioDeviceInfo) =>
+  getDeviceLabel(device, compatibleInputLabelMap.value);
+
+const outputDeviceOptionLabel = (device: AudioDeviceInfo) =>
+  getDeviceLabel(device, compatibleOutputLabelMap.value);
+
+const monitorDeviceOptionLabel = (device: AudioDeviceInfo) =>
+  getDeviceLabel(device, monitorOutputLabelMap.value);
+
+const inputCatalogDeviceLabel = (device: AudioDeviceInfo) =>
+  getDeviceLabel(device, catalogInputLabelMap.value);
+
+const outputCatalogDeviceLabel = (device: AudioDeviceInfo) =>
+  getDeviceLabel(device, catalogOutputLabelMap.value);
+
+const inputOptions = computed<AudioSelectOption[]>(() =>
+  compatibleInputs.value.map((device) => ({
+    id: device.id,
+    label: inputDeviceOptionLabel(device),
+  })),
+);
+
+const virtualOutputOptions = computed<AudioSelectOption[]>(() =>
+  compatibleOutputs.value.map((device) => ({
+    id: device.id,
+    label: outputDeviceOptionLabel(device),
+    recommended: device.virtual_mic_candidate,
+  })),
+);
+
+const monitorOptions = computed<AudioSelectOption[]>(() =>
+  monitorOutputOptions.value.map((device) => ({
+    id: device.id,
+    label: monitorDeviceOptionLabel(device),
+  })),
+);
+
+const inputCompatibilityItems = computed<AudioDevicePanelItem[]>(() =>
+  catalog.inputs.map((device) => ({
+    id: device.id,
+    label: inputCatalogDeviceLabel(device),
+    badgeLabel: device.compatible ? "支持直连" : "不支持直连",
+    badgeVariant: device.compatible ? "success" : "muted",
+    lines: [`采样格式: ${device.supported_sample_formats.join(" / ") || "无"}`],
+  })),
+);
+
+const outputCompatibilityItems = computed<AudioDevicePanelItem[]>(() =>
+  catalog.outputs.map((device) => ({
+    id: device.id,
+    label: outputCatalogDeviceLabel(device),
+    badgeLabel: device.virtual_mic_candidate ? "推荐虚拟麦" : "推荐监听",
+    badgeVariant: device.virtual_mic_candidate ? "primary" : "muted",
+    lines: [
+      `状态: ${device.compatible ? `支持 ${status.model_sample_rate}Hz 直连` : `不支持 ${status.model_sample_rate}Hz 直连`}`,
+      `采样格式: ${device.supported_sample_formats.join(" / ") || "无"}`,
+    ],
+  })),
+);
+
+const vbcableSetupFileName = computed(() => {
+  const fullPath = vbcable.setup_path;
+  if (!fullPath) {
+    return "VBCABLE_Setup_x64.exe";
+  }
+
+  return fullPath.split(/[/\\]/).pop() || "VBCABLE_Setup_x64.exe";
+});
 
 const copyStatus = (next: AudioStatus) => {
   Object.assign(status, next, {
     stats: { ...next.stats },
   });
+};
+
+const copyVBCableStatus = (next: VBCableStatus) => {
+  Object.assign(vbcable, next);
 };
 
 const copyCatalog = (next: AudioDeviceCatalog) => {
@@ -292,56 +279,75 @@ const saveRouting = () => {
   StorageUtils.setItem(StorageKeys.AUDIO_ROUTE_SELECTION, { ...routing });
 };
 
-const hasCompatibleInput = (name: string | null | undefined) =>
-  !!name && compatibleInputs.value.some((device) => device.name === name);
-
-const hasCompatibleOutput = (name: string | null | undefined) =>
-  !!name && compatibleOutputs.value.some((device) => device.name === name);
-
-const firstCompatibleInputName = () => compatibleInputs.value[0]?.name || "";
-
-const firstCompatibleOutputName = () => compatibleOutputs.value[0]?.name || "";
-
-const chooseMonitorFallback = (excludedName: string) => {
-  const preferred = compatibleOutputs.value.find(
-    (device) => !device.virtual_mic_candidate && device.name !== excludedName,
-  );
-  if (preferred) {
-    return preferred.name;
+const resolveDeviceId = (devices: AudioDeviceInfo[], value: string | null | undefined) => {
+  if (!value) {
+    return "";
   }
 
-  const anyCompatible = compatibleOutputs.value.find((device) => device.name !== excludedName);
-  return anyCompatible?.name || "";
+  const exactMatch = devices.find((device) => device.id === value);
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+
+  const sameNameDevices = devices.filter((device) => device.name === value);
+  if (sameNameDevices.length === 1) {
+    return sameNameDevices[0].id;
+  }
+
+  return "";
+};
+
+const firstCompatibleInputId = () => compatibleInputs.value[0]?.id || "";
+
+const firstCompatibleOutputId = () => compatibleOutputs.value[0]?.id || "";
+
+const chooseInputFallback = (excludedId?: string | null) =>
+  compatibleInputs.value.find((device) => device.id !== excludedId)?.id || firstCompatibleInputId();
+
+const chooseMonitorFallback = (excludedId: string) => {
+  const preferred = compatibleOutputs.value.find(
+    (device) => !device.virtual_mic_candidate && device.id !== excludedId,
+  );
+  if (preferred) {
+    return preferred.id;
+  }
+
+  const anyCompatible = compatibleOutputs.value.find((device) => device.id !== excludedId);
+  return anyCompatible?.id || "";
 };
 
 const reconcileRoutingSelection = () => {
-  const nextInput = hasCompatibleInput(routing.inputDeviceName)
-    ? routing.inputDeviceName
-    : hasCompatibleInput(catalog.default_input)
-      ? catalog.default_input!
-      : firstCompatibleInputName();
+  const nextInput =
+    resolveDeviceId(compatibleInputs.value, routing.inputDeviceId) ||
+    resolveDeviceId(compatibleInputs.value, catalog.default_input_id) ||
+    firstCompatibleInputId();
 
-  const nextVirtualOutput = hasCompatibleOutput(routing.virtualOutputDeviceName)
-    ? routing.virtualOutputDeviceName
-    : hasCompatibleOutput(catalog.preferred_virtual_output)
-      ? catalog.preferred_virtual_output!
-      : hasCompatibleOutput(catalog.default_output)
-        ? catalog.default_output!
-        : firstCompatibleOutputName();
+  const nextVirtualOutput =
+    resolveDeviceId(compatibleOutputs.value, routing.virtualOutputDeviceId) ||
+    resolveDeviceId(compatibleOutputs.value, catalog.preferred_virtual_output_id) ||
+    resolveDeviceId(compatibleOutputs.value, catalog.default_output_id) ||
+    firstCompatibleOutputId();
 
-  const preferredMonitor = hasCompatibleOutput(catalog.preferred_monitor_output) && catalog.preferred_monitor_output !== nextVirtualOutput
-    ? catalog.preferred_monitor_output!
-    : hasCompatibleOutput(catalog.default_output) && catalog.default_output !== nextVirtualOutput
-      ? catalog.default_output!
-      : chooseMonitorFallback(nextVirtualOutput);
+  const preferredMonitor =
+    resolveDeviceId(compatibleOutputs.value, catalog.preferred_monitor_output_id) ||
+    resolveDeviceId(compatibleOutputs.value, catalog.default_output_id) ||
+    chooseMonitorFallback(nextVirtualOutput);
 
-  const nextMonitorOutput = hasCompatibleOutput(routing.monitorOutputDeviceName) && routing.monitorOutputDeviceName !== nextVirtualOutput
-    ? routing.monitorOutputDeviceName
-    : preferredMonitor;
+  const currentMonitor = resolveDeviceId(
+    compatibleOutputs.value,
+    routing.monitorOutputDeviceId,
+  );
 
-  routing.inputDeviceName = nextInput;
-  routing.virtualOutputDeviceName = nextVirtualOutput;
-  routing.monitorOutputDeviceName = nextMonitorOutput;
+  const nextMonitorOutput =
+    currentMonitor && currentMonitor !== nextVirtualOutput
+      ? currentMonitor
+      : preferredMonitor !== nextVirtualOutput
+        ? preferredMonitor
+        : chooseMonitorFallback(nextVirtualOutput);
+
+  routing.inputDeviceId = nextInput;
+  routing.virtualOutputDeviceId = nextVirtualOutput;
+  routing.monitorOutputDeviceId = nextMonitorOutput;
 };
 
 const refreshStatus = async () => {
@@ -349,17 +355,86 @@ const refreshStatus = async () => {
   copyStatus(next);
 };
 
+const refreshVBCableStatus = async () => {
+  vbcableLoading.value = true;
+  try {
+    const next = await invoke<VBCableStatus>("get_vbcable_status");
+    copyVBCableStatus(next);
+  } catch (error) {
+    message.error(formatError(error), 2);
+  } finally {
+    vbcableLoading.value = false;
+  }
+};
+
 const refreshDevices = async () => {
   loadingDevices.value = true;
   try {
-    const next = await invoke<AudioDeviceCatalog>("list_audio_devices");
-    copyCatalog(next);
+    const [catalogNext, vbcableNext] = await Promise.all([
+      invoke<AudioDeviceCatalog>("list_audio_devices"),
+      invoke<VBCableStatus>("get_vbcable_status"),
+    ]);
+    copyCatalog(catalogNext);
+    copyVBCableStatus(vbcableNext);
     reconcileRoutingSelection();
   } catch (error) {
     message.error(formatError(error), 2);
   } finally {
     loadingDevices.value = false;
   }
+};
+
+const applyVBCableRecommendedRoute = () => {
+  if (!vbcable.installed || !vbcable.output_device_id) {
+    message.warning("尚未检测到可用的 VB-CABLE 设备", 2);
+    return;
+  }
+
+  const outputDeviceId = resolveDeviceId(compatibleOutputs.value, vbcable.output_device_id);
+  if (!outputDeviceId) {
+    message.warning("已检测到 VB-CABLE，但当前设备列表中还没有可用的播放端，请先刷新设备", 2);
+    return;
+  }
+
+  const inputDeviceId = resolveDeviceId(compatibleInputs.value, vbcable.input_device_id);
+  routing.virtualOutputDeviceId = outputDeviceId;
+
+  if (!routing.inputDeviceId || (inputDeviceId && routing.inputDeviceId === inputDeviceId)) {
+    routing.inputDeviceId = chooseInputFallback(inputDeviceId);
+  }
+
+  if (!routing.monitorOutputDeviceId || routing.monitorOutputDeviceId === outputDeviceId) {
+    routing.monitorOutputDeviceId = chooseMonitorFallback(outputDeviceId);
+  }
+
+  saveRouting();
+  message.success(
+    `已切换到 VB-CABLE 推荐配置，通话软件麦克风请选择 ${vbcable.input_device_name || "麦克风 (CABLE Output)"}`,
+    3,
+  );
+};
+
+const openVBCablePackageDir = async () => {
+  if (!vbcable.package_dir) {
+    message.warning("未发现本地 VB-CABLE 驱动包", 2);
+    return;
+  }
+
+  await openPath(vbcable.package_dir);
+  message.info(`请以管理员身份运行 ${vbcableSetupFileName.value} 完成安装`, 4);
+};
+
+const openVBCableControlPanel = async () => {
+  if (!vbcable.control_panel_path) {
+    message.warning("未找到 VB-CABLE 控制面板", 2);
+    return;
+  }
+
+  await openPath(vbcable.control_panel_path);
+};
+
+const openVBCableDownloadPage = async () => {
+  await openUrl(vbcable.official_download_url);
 };
 
 const toggleOpenCpal = async () => {
@@ -372,16 +447,16 @@ const toggleOpenCpal = async () => {
       const res = await invoke<string>("stop_noise_reduction");
       message.info(res, 1.5);
     } else {
-      if (!routing.virtualOutputDeviceName) {
+      if (!routing.virtualOutputDeviceId) {
         throw new Error("请先选择虚拟麦输出设备");
       }
-      if (routing.monitorOutputDeviceName && routing.monitorOutputDeviceName === routing.virtualOutputDeviceName) {
+      if (routing.monitorOutputDeviceId && routing.monitorOutputDeviceId === routing.virtualOutputDeviceId) {
         throw new Error("监听设备不能和虚拟麦输出设备相同");
       }
       const res = await invoke<string>("start_noise_reduction", {
-        inputDeviceName: routing.inputDeviceName || null,
-        virtualOutputDeviceName: routing.virtualOutputDeviceName || null,
-        monitorOutputDeviceName: routing.monitorOutputDeviceName || null,
+        inputDeviceId: routing.inputDeviceId || null,
+        virtualOutputDeviceId: routing.virtualOutputDeviceId || null,
+        monitorOutputDeviceId: routing.monitorOutputDeviceId || null,
       });
       message.info(res, 2);
     }
@@ -398,7 +473,7 @@ const toggleListener = async (open: boolean) => {
     message.warning("请先启动降噪引擎", 2);
     return;
   }
-  if (open && !routing.monitorOutputDeviceName) {
+  if (open && !routing.monitorOutputDeviceId) {
     message.warning("请先选择本地监听设备", 2);
     return;
   }
@@ -418,8 +493,8 @@ const toggleListener = async (open: boolean) => {
 watch(
   () => ({ ...routing }),
   () => {
-    if (routing.monitorOutputDeviceName === routing.virtualOutputDeviceName) {
-      routing.monitorOutputDeviceName = "";
+    if (routing.monitorOutputDeviceId === routing.virtualOutputDeviceId) {
+      routing.monitorOutputDeviceId = "";
     }
     saveRouting();
   },
@@ -439,3 +514,367 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<style>
+.cpal-page {
+  --cpal-page-text: #1f2937;
+  --cpal-page-muted: #667085;
+  --cpal-page-soft: #8b97ab;
+  --cpal-card-bg: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  --cpal-card-bg-strong: linear-gradient(135deg, #eef5ff 0%, #f8fbff 55%, #ffffff 100%);
+  --cpal-card-bg-soft: #f5f8fc;
+  --cpal-card-border: #dbe3ee;
+  --cpal-card-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --cpal-pill-bg: #eef4fb;
+  --cpal-pill-text: #31435f;
+  --cpal-success-bg: #e9fbf1;
+  --cpal-success-text: #127a45;
+  --cpal-warning-bg: #fff4df;
+  --cpal-warning-text: #b26a00;
+  --cpal-primary-bg: #e8f1ff;
+  --cpal-primary-text: #1f5fd1;
+  --cpal-muted-bg: #eef2f7;
+  --cpal-muted-text: #5f6f86;
+  --cpal-input-bg: #ffffff;
+  --cpal-input-border: #d4dcea;
+  display: grid;
+  gap: 16px;
+  color: var(--cpal-page-text);
+}
+
+body.dark-theme .cpal-page {
+  --cpal-page-text: #eef4ff;
+  --cpal-page-muted: rgba(210, 221, 241, 0.72);
+  --cpal-page-soft: rgba(170, 187, 216, 0.68);
+  --cpal-card-bg: linear-gradient(180deg, rgba(17, 23, 34, 0.96) 0%, rgba(13, 19, 29, 0.92) 100%);
+  --cpal-card-bg-strong: linear-gradient(135deg, rgba(16, 30, 49, 0.98) 0%, rgba(15, 22, 33, 0.96) 52%, rgba(12, 17, 26, 0.94) 100%);
+  --cpal-card-bg-soft: rgba(255, 255, 255, 0.04);
+  --cpal-card-border: rgba(128, 149, 184, 0.18);
+  --cpal-card-shadow: 0 18px 36px rgba(0, 0, 0, 0.24);
+  --cpal-pill-bg: rgba(255, 255, 255, 0.06);
+  --cpal-pill-text: rgba(226, 235, 252, 0.9);
+  --cpal-success-bg: rgba(34, 197, 94, 0.14);
+  --cpal-success-text: #7be7a7;
+  --cpal-warning-bg: rgba(245, 158, 11, 0.16);
+  --cpal-warning-text: #ffd079;
+  --cpal-primary-bg: rgba(59, 130, 246, 0.16);
+  --cpal-primary-text: #8cc0ff;
+  --cpal-muted-bg: rgba(255, 255, 255, 0.06);
+  --cpal-muted-text: rgba(196, 209, 233, 0.78);
+  --cpal-input-bg: rgba(255, 255, 255, 0.03);
+  --cpal-input-border: rgba(128, 149, 184, 0.22);
+}
+
+.cpal-card {
+  border: 1px solid var(--cpal-card-border);
+  border-radius: 18px;
+  background: var(--cpal-card-bg);
+  box-shadow: var(--cpal-card-shadow);
+  padding: 18px;
+}
+
+.cpal-card--accent {
+  background: var(--cpal-card-bg-strong);
+}
+
+.cpal-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.cpal-hero__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.cpal-kicker {
+  color: var(--cpal-primary-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cpal-page__title {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cpal-page__desc,
+.cpal-card__subtitle,
+.device-item__meta,
+.cpal-empty,
+.cpal-info-label,
+.cpal-fact-item span,
+.cpal-metric-item span {
+  color: var(--cpal-page-muted);
+}
+
+.cpal-page__desc {
+  margin-top: 8px;
+  max-width: 760px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.cpal-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cpal-pill,
+.cpal-badge,
+.cpal-soft-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cpal-pill {
+  background: var(--cpal-pill-bg);
+  color: var(--cpal-pill-text);
+}
+
+.cpal-pill.is-success,
+.cpal-badge.is-success {
+  background: var(--cpal-success-bg);
+  color: var(--cpal-success-text);
+}
+
+.cpal-pill.is-primary,
+.cpal-badge.is-primary {
+  background: var(--cpal-primary-bg);
+  color: var(--cpal-primary-text);
+}
+
+.cpal-badge.is-warning {
+  background: var(--cpal-warning-bg);
+  color: var(--cpal-warning-text);
+}
+
+.cpal-pill.is-idle,
+.cpal-badge.is-muted,
+.cpal-soft-tag {
+  background: var(--cpal-muted-bg);
+  color: var(--cpal-muted-text);
+}
+
+.cpal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cpal-actions--compact {
+  align-self: flex-start;
+}
+
+.cpal-card__head,
+.cpal-card__title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.cpal-card__head {
+  align-items: flex-start;
+}
+
+.cpal-card__title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cpal-card__subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cpal-info-grid,
+.cpal-fact-grid,
+.cpal-metric-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cpal-info-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cpal-info-item,
+.cpal-fact-item,
+.cpal-metric-item,
+.device-item {
+  border: 1px solid var(--cpal-card-border);
+  border-radius: 14px;
+  background: var(--cpal-card-bg-soft);
+}
+
+.cpal-info-item,
+.cpal-fact-item,
+.cpal-metric-item {
+  padding: 12px 14px;
+}
+
+.cpal-info-item strong,
+.cpal-fact-item strong,
+.cpal-metric-item strong,
+.device-item__title {
+  display: block;
+  margin-top: 6px;
+  color: var(--cpal-page-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.cpal-note-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cpal-note {
+  border-left: 3px solid var(--cpal-card-border);
+  padding-left: 12px;
+  color: var(--cpal-page-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cpal-note--accent {
+  border-left-color: var(--cpal-primary-text);
+  color: var(--cpal-page-text);
+}
+
+.cpal-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.cpal-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cpal-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.setting-card {
+  display: grid;
+  gap: 12px;
+}
+
+.device-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.device-item {
+  padding: 12px 14px;
+}
+
+.device-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.device-item__meta {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.cpal-empty {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.cpal-page .ant-select-selector {
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border-color: var(--cpal-input-border) !important;
+  background: var(--cpal-input-bg) !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s ease, background 0.2s ease !important;
+}
+
+.cpal-page .ant-select-selection-item,
+.cpal-page .ant-select-selection-placeholder,
+.cpal-page .ant-select-selection-search-input {
+  line-height: 42px !important;
+}
+
+.cpal-page .ant-select-selection-item {
+  color: var(--cpal-page-text) !important;
+}
+
+.cpal-page .ant-select-selection-placeholder {
+  color: var(--cpal-page-soft) !important;
+}
+
+.cpal-page .ant-select-arrow {
+  color: var(--cpal-page-soft) !important;
+}
+
+@media (max-width: 1080px) {
+  .cpal-hero,
+  .cpal-card__head {
+    flex-direction: column;
+  }
+
+  .cpal-actions {
+    justify-content: flex-start;
+  }
+
+  .cpal-grid--three,
+  .cpal-grid--two,
+  .cpal-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .cpal-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .cpal-page__title {
+    font-size: 24px;
+  }
+
+  .cpal-actions {
+    width: 100%;
+  }
+
+  .cpal-actions .ant-btn {
+    width: 100%;
+  }
+
+  .device-item__head,
+  .cpal-card__title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>

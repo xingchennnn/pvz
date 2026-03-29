@@ -7,15 +7,19 @@ use once_cell::sync::OnceCell;
 use ringbuf::traits::{Consumer, Producer, Split};
 use ringbuf::HeapRb;
 use serde::Serialize;
+use std::env;
+use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     Arc, Mutex,
 };
 use std::thread::{self, JoinHandle};
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 const MODEL_SAMPLE_RATE: u32 = 48_000;
 const DENOISE_FRAME_SIZE: usize = DenoiseState::FRAME_SIZE;
+/** 环形缓冲区容量 */
 const RING_CAPACITY: usize = DENOISE_FRAME_SIZE * 12;
 const PCM_SCALE: f32 = 32_768.0;
 const INPUT_SILENCE_RMS_THRESHOLD: f32 = 0.004;
@@ -24,6 +28,10 @@ const SPEECH_PROB_THRESHOLD: f32 = 0.28;
 const GATE_ATTACK: f32 = 0.35;
 const GATE_RELEASE: f32 = 0.08;
 const QUIET_FRAME_GAIN: f32 = 0.15;
+const VBCABLE_DOWNLOAD_URL: &str =
+    "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip";
+const VBCABLE_INTEGRATION_NOTICE: &str =
+    "VB-CABLE 官方许可不允许未授权集成到别的软件安装流程，本应用仅提供状态检测、官方入口和推荐配置。";
 
 struct AudioState {
     handle: Option<JoinHandle<()>>,
@@ -85,7 +93,9 @@ pub struct AudioStatus {
 
 #[derive(Serialize)]
 pub struct AudioDeviceInfo {
+    id: String,
     name: String,
+    detail: Option<String>,
     compatible: bool,
     supported_sample_formats: Vec<String>,
     virtual_mic_candidate: bool,
@@ -94,12 +104,26 @@ pub struct AudioDeviceInfo {
 #[derive(Serialize)]
 pub struct AudioDeviceCatalog {
     model_sample_rate: u32,
-    default_input: Option<String>,
-    default_output: Option<String>,
-    preferred_virtual_output: Option<String>,
-    preferred_monitor_output: Option<String>,
+    default_input_id: Option<String>,
+    default_output_id: Option<String>,
+    preferred_virtual_output_id: Option<String>,
+    preferred_monitor_output_id: Option<String>,
     inputs: Vec<AudioDeviceInfo>,
     outputs: Vec<AudioDeviceInfo>,
+}
+
+#[derive(Serialize)]
+pub struct VBCableStatus {
+    installed: bool,
+    package_dir: Option<String>,
+    setup_path: Option<String>,
+    control_panel_path: Option<String>,
+    input_device_id: Option<String>,
+    input_device_name: Option<String>,
+    output_device_id: Option<String>,
+    output_device_name: Option<String>,
+    official_download_url: String,
+    integration_notice: String,
 }
 
 static AUDIO_THREAD: OnceCell<Arc<Mutex<Option<AudioState>>>> = OnceCell::new();
@@ -125,9 +149,81 @@ fn stats_snapshot(stats: &AudioStatsCounters) -> AudioStatsSnapshot {
     }
 }
 
-#[allow(deprecated)]
 fn device_name(device: &cpal::Device) -> String {
-    device.name().unwrap_or_else(|_| "未知设备".to_string())
+    device
+        .description()
+        .map(|description| description.name().trim().to_string())
+        .ok()
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| {
+            #[allow(deprecated)]
+            {
+                device.name().unwrap_or_else(|_| "未知设备".to_string())
+            }
+        })
+}
+
+fn device_detail(device: &cpal::Device) -> Option<String> {
+    let name = device_name(device);
+    device.description().ok().and_then(|description| {
+        description
+            .driver()
+            .or_else(|| description.manufacturer())
+            .or_else(|| description.address())
+            .or_else(|| {
+                description.extended().iter().find_map(|line| {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed)
+                    }
+                })
+            })
+            .map(str::trim)
+            .filter(|detail| !detail.is_empty() && *detail != name)
+            .map(str::to_string)
+    })
+}
+
+fn device_display_label(device: &cpal::Device) -> String {
+    let name = device_name(device);
+    if let Some(detail) = device_detail(device) {
+        format!("{name} · {detail}")
+    } else {
+        name
+    }
+}
+
+fn device_search_text(device: &cpal::Device) -> String {
+    let mut parts = vec![device_name(device)];
+    if let Some(detail) = device_detail(device) {
+        parts.push(detail);
+    }
+
+    if let Ok(description) = device.description() {
+        parts.extend(
+            description
+                .extended()
+                .iter()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty())
+                .map(str::to_string),
+        );
+    }
+
+    parts.join(" ").to_ascii_lowercase()
+}
+
+fn device_id_text(device: &cpal::Device) -> String {
+    device
+        .id()
+        .map(|device_id| device_id.to_string())
+        .unwrap_or_else(|_| device_name(device))
+}
+
+fn parse_device_id(selector: &str) -> Option<cpal::DeviceId> {
+    cpal::DeviceId::from_str(selector).ok()
 }
 
 fn sample_format_label(format: SampleFormat) -> String {
@@ -170,6 +266,140 @@ fn looks_like_vbcable_output(name: &str) -> bool {
 
 fn looks_like_vbcable_input(name: &str) -> bool {
     name.to_ascii_lowercase().contains("cable output")
+}
+
+fn path_to_string(path: &Path) -> String {
+    path.to_string_lossy().to_string()
+}
+
+fn is_vbcable_package_dir(path: &Path) -> bool {
+    path.is_dir()
+        && (path.join("VBCABLE_Setup_x64.exe").is_file() || path.join("VBCABLE_Setup.exe").is_file())
+}
+
+fn find_vbcable_package_in(path: &Path) -> Option<PathBuf> {
+    if is_vbcable_package_dir(path) {
+        return Some(path.to_path_buf());
+    }
+
+    std::fs::read_dir(path).ok()?.find_map(|entry| {
+        let entry = entry.ok()?;
+        let child_path = entry.path();
+        let child_name = entry.file_name().to_string_lossy().to_ascii_lowercase();
+        if child_name.starts_with("vbcable_driver_pack") && is_vbcable_package_dir(&child_path) {
+            Some(child_path)
+        } else {
+            None
+        }
+    })
+}
+
+fn candidate_vbcable_search_dirs() -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Ok(path) = env::var("PVZ_VBCABLE_DIR") {
+        candidates.push(PathBuf::from(path));
+    }
+
+    if let Ok(path) = env::current_dir() {
+        candidates.push(path.clone());
+        if let Some(parent) = path.parent() {
+            candidates.push(parent.to_path_buf());
+        }
+    }
+
+    if let Ok(path) = env::current_exe() {
+        if let Some(parent) = path.parent() {
+            candidates.push(parent.to_path_buf());
+            if let Some(grand_parent) = parent.parent() {
+                candidates.push(grand_parent.to_path_buf());
+            }
+        }
+    }
+
+    if let Ok(user_profile) = env::var("USERPROFILE") {
+        let user_profile = PathBuf::from(user_profile);
+        candidates.push(user_profile.join("Downloads"));
+        candidates.push(user_profile.join("Desktop"));
+        candidates.push(user_profile.join("Documents"));
+    }
+
+    let mut unique = Vec::new();
+    for candidate in candidates {
+        if unique.iter().any(|item: &PathBuf| item == &candidate) {
+            continue;
+        }
+        unique.push(candidate);
+    }
+
+    unique
+}
+
+fn find_local_vbcable_package_dir() -> Option<PathBuf> {
+    candidate_vbcable_search_dirs()
+        .into_iter()
+        .find_map(|path| find_vbcable_package_in(&path))
+}
+
+fn preferred_vbcable_setup_path(package_dir: &Path) -> Option<PathBuf> {
+    let x64_setup = package_dir.join("VBCABLE_Setup_x64.exe");
+    if x64_setup.is_file() {
+        return Some(x64_setup);
+    }
+
+    let setup = package_dir.join("VBCABLE_Setup.exe");
+    if setup.is_file() {
+        return Some(setup);
+    }
+
+    None
+}
+
+fn vbcable_control_panel_path(package_dir: &Path) -> Option<PathBuf> {
+    let control_panel = package_dir.join("VBCABLE_ControlPanel.exe");
+    if control_panel.is_file() {
+        Some(control_panel)
+    } else {
+        None
+    }
+}
+
+fn find_vbcable_output_device(host: &cpal::Host) -> Option<cpal::Device> {
+    host.output_devices()
+        .ok()?
+        .find(|device| looks_like_vbcable_output(&device_search_text(device)))
+}
+
+fn find_vbcable_input_device(host: &cpal::Host) -> Option<cpal::Device> {
+    host.input_devices()
+        .ok()?
+        .find(|device| looks_like_vbcable_input(&device_search_text(device)))
+}
+
+fn build_vbcable_status() -> VBCableStatus {
+    let host = cpal::default_host();
+    let output_device = find_vbcable_output_device(&host);
+    let input_device = find_vbcable_input_device(&host);
+    let package_dir = find_local_vbcable_package_dir();
+    let setup_path = package_dir
+        .as_ref()
+        .and_then(|path| preferred_vbcable_setup_path(path));
+    let control_panel_path = package_dir
+        .as_ref()
+        .and_then(|path| vbcable_control_panel_path(path));
+
+    VBCableStatus {
+        installed: output_device.is_some() && input_device.is_some(),
+        package_dir: package_dir.as_ref().map(|path| path_to_string(path)),
+        setup_path: setup_path.as_ref().map(|path| path_to_string(path)),
+        control_panel_path: control_panel_path.as_ref().map(|path| path_to_string(path)),
+        input_device_id: input_device.as_ref().map(|device| device_id_text(device)),
+        input_device_name: input_device.as_ref().map(|device| device_display_label(device)),
+        output_device_id: output_device.as_ref().map(|device| device_id_text(device)),
+        output_device_name: output_device.as_ref().map(|device| device_display_label(device)),
+        official_download_url: VBCABLE_DOWNLOAD_URL.to_string(),
+        integration_notice: VBCABLE_INTEGRATION_NOTICE.to_string(),
+    }
 }
 
 fn choose_low_latency_buffer_size(config: &SupportedStreamConfig) -> BufferSize {
@@ -230,7 +460,17 @@ fn device_supports_rate(device: &cpal::Device, is_input: bool, sample_rate: u32)
         .unwrap_or(false)
 }
 
-fn find_named_input_device(host: &cpal::Host, target: &str) -> Result<cpal::Device, String> {
+fn find_input_device_by_selector(host: &cpal::Host, target: &str) -> Result<cpal::Device, String> {
+    if let Some(device_id) = parse_device_id(target) {
+        if let Some(device) = host.device_by_id(&device_id) {
+            if device.supports_input() {
+                return Ok(device);
+            }
+        }
+
+        return Err(format!("未找到输入设备: {target}"));
+    }
+
     let devices = host.input_devices().map_err(|err| err.to_string())?;
     devices
         .into_iter()
@@ -238,7 +478,17 @@ fn find_named_input_device(host: &cpal::Host, target: &str) -> Result<cpal::Devi
         .ok_or_else(|| format!("未找到输入设备: {target}"))
 }
 
-fn find_named_output_device(host: &cpal::Host, target: &str) -> Result<cpal::Device, String> {
+fn find_output_device_by_selector(host: &cpal::Host, target: &str) -> Result<cpal::Device, String> {
+    if let Some(device_id) = parse_device_id(target) {
+        if let Some(device) = host.device_by_id(&device_id) {
+            if device.supports_output() {
+                return Ok(device);
+            }
+        }
+
+        return Err(format!("未找到输出设备: {target}"));
+    }
+
     let devices = host.output_devices().map_err(|err| err.to_string())?;
     devices
         .into_iter()
@@ -246,52 +496,51 @@ fn find_named_output_device(host: &cpal::Host, target: &str) -> Result<cpal::Dev
         .ok_or_else(|| format!("未找到输出设备: {target}"))
 }
 
-fn preferred_virtual_output_name(host: &cpal::Host) -> Option<String> {
+fn preferred_virtual_output_id(host: &cpal::Host) -> Option<String> {
     host.output_devices().ok()?.find_map(|device| {
-        let name = device_name(&device);
-        if looks_like_virtual_microphone_output(&name)
+        if looks_like_virtual_microphone_output(&device_search_text(&device))
             && device_supports_rate(&device, false, MODEL_SAMPLE_RATE)
         {
-            Some(name)
+            Some(device_id_text(&device))
         } else {
             None
         }
     })
 }
 
-fn preferred_monitor_output_name(host: &cpal::Host, excluded: Option<&str>) -> Option<String> {
+fn preferred_monitor_output_id(host: &cpal::Host, excluded: Option<&str>) -> Option<String> {
     if let Some(default_device) = host.default_output_device() {
-        let name = device_name(&default_device);
-        if Some(name.as_str()) != excluded
+        let device_id = device_id_text(&default_device);
+        if Some(device_id.as_str()) != excluded
             && device_supports_rate(&default_device, false, MODEL_SAMPLE_RATE)
         {
-            return Some(name);
+            return Some(device_id);
         }
     }
 
     if let Ok(devices) = host.output_devices() {
         for device in devices {
-            let name = device_name(&device);
-            if Some(name.as_str()) == excluded {
+            let device_id = device_id_text(&device);
+            if Some(device_id.as_str()) == excluded {
                 continue;
             }
             if !device_supports_rate(&device, false, MODEL_SAMPLE_RATE) {
                 continue;
             }
-            if !looks_like_virtual_microphone_output(&name) {
-                return Some(name);
+            if !looks_like_virtual_microphone_output(&device_search_text(&device)) {
+                return Some(device_id);
             }
         }
     }
 
     if let Ok(devices) = host.output_devices() {
         for device in devices {
-            let name = device_name(&device);
-            if Some(name.as_str()) == excluded {
+            let device_id = device_id_text(&device);
+            if Some(device_id.as_str()) == excluded {
                 continue;
             }
             if device_supports_rate(&device, false, MODEL_SAMPLE_RATE) {
-                return Some(name);
+                return Some(device_id);
             }
         }
     }
@@ -301,7 +550,7 @@ fn preferred_monitor_output_name(host: &cpal::Host, excluded: Option<&str>) -> O
 
 fn resolve_input_device(host: &cpal::Host, requested: Option<&str>) -> Result<cpal::Device, String> {
     if let Some(name) = requested {
-        return find_named_input_device(host, name);
+        return find_input_device_by_selector(host, name);
     }
 
     host.default_input_device()
@@ -313,11 +562,11 @@ fn resolve_virtual_output_device(
     requested: Option<&str>,
 ) -> Result<cpal::Device, String> {
     if let Some(name) = requested {
-        return find_named_output_device(host, name);
+        return find_output_device_by_selector(host, name);
     }
 
-    if let Some(name) = preferred_virtual_output_name(host) {
-        return find_named_output_device(host, &name);
+    if let Some(device_id) = preferred_virtual_output_id(host) {
+        return find_output_device_by_selector(host, &device_id);
     }
 
     host.default_output_device()
@@ -327,17 +576,18 @@ fn resolve_virtual_output_device(
 fn resolve_monitor_output_device(
     host: &cpal::Host,
     requested: Option<&str>,
-    excluded_name: &str,
+    excluded_id: &str,
 ) -> Result<Option<cpal::Device>, String> {
-    if let Some(name) = requested {
-        if name == excluded_name {
+    if let Some(selector) = requested {
+        let device = find_output_device_by_selector(host, selector)?;
+        if device_id_text(&device) == excluded_id {
             return Err("监听设备不能和虚拟麦输出设备相同".to_string());
         }
-        return find_named_output_device(host, name).map(Some);
+        return Ok(Some(device));
     }
 
-    if let Some(name) = preferred_monitor_output_name(host, Some(excluded_name)) {
-        return find_named_output_device(host, &name).map(Some);
+    if let Some(device_id) = preferred_monitor_output_id(host, Some(excluded_id)) {
+        return find_output_device_by_selector(host, &device_id).map(Some);
     }
 
     Ok(None)
@@ -431,7 +681,9 @@ where
 fn input_device_info(device: &cpal::Device) -> AudioDeviceInfo {
     let supported = supported_configs_for_rate(device, true, MODEL_SAMPLE_RATE).unwrap_or_default();
     AudioDeviceInfo {
+        id: device_id_text(device),
         name: device_name(device),
+        detail: device_detail(device),
         compatible: !supported.is_empty(),
         supported_sample_formats: supported
             .into_iter()
@@ -445,25 +697,27 @@ fn output_device_info(device: &cpal::Device) -> AudioDeviceInfo {
     let name = device_name(device);
     let supported = supported_configs_for_rate(device, false, MODEL_SAMPLE_RATE).unwrap_or_default();
     AudioDeviceInfo {
+        id: device_id_text(device),
         name: name.clone(),
+        detail: device_detail(device),
         compatible: !supported.is_empty(),
         supported_sample_formats: supported
             .into_iter()
             .map(|cfg| sample_format_label(cfg.sample_format()))
             .collect(),
-        virtual_mic_candidate: looks_like_virtual_microphone_output(&name),
+        virtual_mic_candidate: looks_like_virtual_microphone_output(&device_search_text(device)),
     }
 }
 
 #[tauri::command]
 pub fn list_audio_devices() -> Result<AudioDeviceCatalog, String> {
     let host = cpal::default_host();
-    let default_input = host.default_input_device().map(|device| device_name(&device));
-    let default_output = host.default_output_device().map(|device| device_name(&device));
-    let preferred_virtual_output = preferred_virtual_output_name(&host);
-    let preferred_monitor_output = preferred_monitor_output_name(
+    let default_input_id = host.default_input_device().map(|device| device_id_text(&device));
+    let default_output_id = host.default_output_device().map(|device| device_id_text(&device));
+    let preferred_virtual_output_id = preferred_virtual_output_id(&host);
+    let preferred_monitor_output_id = preferred_monitor_output_id(
         &host,
-        preferred_virtual_output.as_deref(),
+        preferred_virtual_output_id.as_deref(),
     );
 
     let inputs = host
@@ -479,10 +733,10 @@ pub fn list_audio_devices() -> Result<AudioDeviceCatalog, String> {
 
     Ok(AudioDeviceCatalog {
         model_sample_rate: MODEL_SAMPLE_RATE,
-        default_input,
-        default_output,
-        preferred_virtual_output,
-        preferred_monitor_output,
+        default_input_id,
+        default_output_id,
+        preferred_virtual_output_id,
+        preferred_monitor_output_id,
         inputs,
         outputs,
     })
@@ -537,9 +791,9 @@ pub fn get_audio_status() -> AudioStatus {
 
 #[tauri::command]
 pub fn start_noise_reduction(
-    input_device_name: Option<String>,
-    virtual_output_device_name: Option<String>,
-    monitor_output_device_name: Option<String>,
+    input_device_id: Option<String>,
+    virtual_output_device_id: Option<String>,
+    monitor_output_device_id: Option<String>,
 ) -> Result<String, String> {
     let mut guard = audio_cell().lock().unwrap();
     if let Some(state) = &*guard {
@@ -548,29 +802,30 @@ pub fn start_noise_reduction(
         }
     }
 
-    let input_device_name = normalize_requested_device_name(input_device_name);
-    let virtual_output_device_name = normalize_requested_device_name(virtual_output_device_name);
-    let monitor_output_device_name = normalize_requested_device_name(monitor_output_device_name);
+    let input_device_id = normalize_requested_device_name(input_device_id);
+    let virtual_output_device_id = normalize_requested_device_name(virtual_output_device_id);
+    let monitor_output_device_id = normalize_requested_device_name(monitor_output_device_id);
 
     let host = cpal::default_host();
-    let input_device = resolve_input_device(&host, input_device_name.as_deref())?;
+    let input_device = resolve_input_device(&host, input_device_id.as_deref())?;
     let virtual_output_device =
-        resolve_virtual_output_device(&host, virtual_output_device_name.as_deref())?;
-    let resolved_virtual_output_name = device_name(&virtual_output_device);
+        resolve_virtual_output_device(&host, virtual_output_device_id.as_deref())?;
+    let resolved_virtual_output_id = device_id_text(&virtual_output_device);
+    let resolved_virtual_output_label = device_display_label(&virtual_output_device);
     let monitor_output_device = resolve_monitor_output_device(
         &host,
-        monitor_output_device_name.as_deref(),
-        &resolved_virtual_output_name,
+        monitor_output_device_id.as_deref(),
+        &resolved_virtual_output_id,
     )?;
-    let resolved_monitor_output_name = monitor_output_device
+    let resolved_monitor_output_label = monitor_output_device
         .as_ref()
-        .map(|device| device_name(device));
+        .map(device_display_label);
 
     let input_supported = supported_configs_for_rate(&input_device, true, MODEL_SAMPLE_RATE)?;
     let input_supported = select_supported_config(input_supported).ok_or_else(|| {
         format!(
             "输入设备 {} 不支持 {}Hz",
-            device_name(&input_device),
+            device_display_label(&input_device),
             MODEL_SAMPLE_RATE
         )
     })?;
@@ -580,7 +835,7 @@ pub fn start_noise_reduction(
     let virtual_output_supported = select_supported_config(virtual_output_supported).ok_or_else(|| {
         format!(
             "输出设备 {} 不支持 {}Hz",
-            device_name(&virtual_output_device),
+            resolved_virtual_output_label,
             MODEL_SAMPLE_RATE
         )
     })?;
@@ -600,7 +855,7 @@ pub fn start_noise_reduction(
         let supported = select_supported_config(supported).ok_or_else(|| {
             format!(
                 "监听设备 {} 不支持 {}Hz",
-                device_name(device),
+                device_display_label(device),
                 MODEL_SAMPLE_RATE
             )
         })?;
@@ -622,12 +877,16 @@ pub fn start_noise_reduction(
     let running = Arc::new(AtomicBool::new(true));
     let monitor_enabled = Arc::new(AtomicBool::new(false));
     let stats = Arc::new(AudioStatsCounters::default());
-
+    // 输入环形缓冲区 
     let input_ring = HeapRb::<f32>::new(RING_CAPACITY);
     let (producer_in, mut consumer_in) = input_ring.split();
+    // 虚拟输出环形缓冲区 
     let virtual_output_ring = HeapRb::<f32>::new(RING_CAPACITY);
+    // 这是虚拟输出设备 
     let (mut virtual_output_producer, virtual_output_consumer) = virtual_output_ring.split();
+    // 监听设备环形缓冲区 
     let monitor_output_ring = HeapRb::<f32>::new(RING_CAPACITY);
+    // 这是监听设备
     let (mut monitor_output_producer, monitor_output_consumer) = monitor_output_ring.split();
 
     let input_stream = match input_sample_format {
@@ -837,9 +1096,9 @@ pub fn start_noise_reduction(
         _input_stream: Some(input_stream),
         _virtual_output_stream: Some(virtual_output_stream),
         monitor_output_stream,
-        input_device_name: device_name(&input_device),
-        virtual_output_device_name: resolved_virtual_output_name.clone(),
-        monitor_output_device_name: resolved_monitor_output_name.clone(),
+        input_device_name: device_display_label(&input_device),
+        virtual_output_device_name: resolved_virtual_output_label.clone(),
+        monitor_output_device_name: resolved_monitor_output_label.clone(),
         input_channels: input_config.channels,
         virtual_output_channels: virtual_output_config.channels,
         monitor_output_channels,
@@ -850,11 +1109,11 @@ pub fn start_noise_reduction(
         stats,
     });
 
-    let monitor_summary = resolved_monitor_output_name.unwrap_or_else(|| "未配置".to_string());
+    let monitor_summary = resolved_monitor_output_label.unwrap_or_else(|| "未配置".to_string());
     Ok(format!(
         "RNNoise 降噪引擎已启动，输入: {}，虚拟麦输出: {}，监听: {}，采样率: {}Hz",
-        device_name(&input_device),
-        resolved_virtual_output_name,
+        device_display_label(&input_device),
+        resolved_virtual_output_label,
         monitor_summary,
         MODEL_SAMPLE_RATE
     ))
@@ -918,37 +1177,27 @@ pub fn stop_noise_reduction() -> Result<String, String> {
     Ok("当前没有正在运行的降噪任务".into())
 }
 
-#[warn(dead_code)]
-fn install_vbcable() -> String {
-    let installed = check_vbcable_installed();
-    if installed == "true" {
-        return "VB-Cable 已安装".into();
+#[tauri::command]
+pub fn on_install_vbcable() -> String {
+    let status = build_vbcable_status();
+    if status.installed {
+        return "VB-CABLE 已安装，可直接套用推荐配置。".into();
     }
-    "当前版本尚未集成自动安装程序，请先手动安装 VB-Cable".into()
-}
 
-#[warn(dead_code)]
-fn check_vbcable_installed() -> String {
-    let host = cpal::default_host();
-    let has_playback = host
-        .output_devices()
-        .ok()
-        .map(|mut devices| devices.any(|device| looks_like_vbcable_output(&device_name(&device))))
-        .unwrap_or(false);
-    let has_recording = host
-        .input_devices()
-        .ok()
-        .map(|mut devices| devices.any(|device| looks_like_vbcable_input(&device_name(&device))))
-        .unwrap_or(false);
-
-    if has_playback && has_recording {
-        "true".into()
-    } else {
-        "false".into()
+    if let Some(package_dir) = status.package_dir {
+        return format!(
+            "已发现本地 VB-CABLE 驱动包：{}。请以管理员身份运行官方 Setup 程序安装，并在安装后重启电脑。",
+            package_dir
+        );
     }
+
+    format!(
+        "未检测到 VB-CABLE。本应用不内置自动安装，请从官网下载后解压并以管理员身份运行官方 Setup：{}",
+        status.official_download_url
+    )
 }
 
 #[tauri::command]
-pub fn on_install_vbcable() -> String {
-    install_vbcable()
+pub fn get_vbcable_status() -> VBCableStatus {
+    build_vbcable_status()
 }

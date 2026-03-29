@@ -177,6 +177,7 @@ pub fn run() {
             audio::device::close_listener,
             audio::device::list_audio_devices,
             audio::device::get_audio_status,
+            audio::device::get_vbcable_status,
             audio::device::on_install_vbcable, // audio::device::get_listener_status,
             pos::index::get_all_windows ,
             pos::index::set_window_pos_command

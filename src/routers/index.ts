@@ -61,13 +61,13 @@ export const routes = [
     icon: RedditOutlined,
     component: () => import("@/views/pvz/index.vue"),
   },
-  {
-    name: "About",
-    label: "关于",
-    path: "/about",
-    icon: UserOutlined,
-    component: () => import("@/views/about/index.vue"),
-  },
+  // {
+  //   name: "About",
+  //   label: "关于",
+  //   path: "/about",
+  //   icon: UserOutlined,
+  //   component: () => import("@/views/about/index.vue"),
+  // },
   {
     name: "窗口位置",
     label: "窗口位置",
@@ -75,13 +75,13 @@ export const routes = [
     icon: UploadOutlined,
     component: () => import("@/views/windowPos/index.vue"),
   },
-  {
-    name: "设置",
-    label: "设置",
-    path: "/settings",
-    icon: SettingOutlined,
-    component: () => import("@/views/settings/index.vue"),
-  }
+  // {
+  //   name: "设置",
+  //   label: "设置",
+  //   path: "/settings",
+  //   icon: SettingOutlined,
+  //   component: () => import("@/views/settings/index.vue"),
+  // }
 ];
 
 
