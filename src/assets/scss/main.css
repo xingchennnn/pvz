@@ -5,6 +5,9 @@
   --primary-color: #1890ff;
   --logo-height: 40px;
   --hover-color: #eeeeeecc;
+  --scrollbar-track-color: #f0f3f8;
+  --scrollbar-thumb-color: #a7b1c2;
+  --scrollbar-thumb-hover-color: #8e99ad;
 }
 
 .dark-theme {
@@ -14,12 +17,16 @@
   --primary-color: #177ddc;
   --logo-height: 40px;
   --hover-color: #222222cc;
+  --scrollbar-track-color: #0f1724;
+  --scrollbar-thumb-color: #4b5b74;
+  --scrollbar-thumb-hover-color: #6881a3;
 }
 
 
 body {
   background: var(--bg-color);
   color: var(--text-color);
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
   transition: background 1s, color 1s;
 }
 
@@ -32,12 +39,16 @@ body {
 
 /** 滚动条轨道 */
 ::-webkit-scrollbar-track {
-  background-color: #f5f5f5;
+  background-color: var(--scrollbar-track-color);
   border-radius: 4px;
 }
 
 /** 滚动条滑块 */
 ::-webkit-scrollbar-thumb {
-  background-color: #999;
+  background-color: var(--scrollbar-thumb-color);
   border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color);
 }

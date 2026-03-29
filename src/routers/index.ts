@@ -1,11 +1,9 @@
 import { createWebHashHistory, createRouter } from "vue-router";
 import {
-  UserOutlined,
   UploadOutlined,
   HomeOutlined,
   BookOutlined,
   AudioOutlined,
-  SettingOutlined,
   RedditOutlined
 } from "@ant-design/icons-vue";
 
@@ -17,13 +15,13 @@ export const routes = [
     icon: HomeOutlined,
     component: () => import("@/views/home/index.vue"),
   },
-  {
-    name: "文章",
-    label: "文章",
-    path: "/article",
-    icon: BookOutlined,
-    component: () => import("@/views/article/index.vue"),
-  },
+  // {
+  //   name: "文章",
+  //   label: "文章",
+  //   path: "/article",
+  //   icon: BookOutlined,
+  //   component: () => import("@/views/article/index.vue"),
+  // },
   {
     name: "文章详情",
     label: "文章详情",
@@ -47,7 +45,7 @@ export const routes = [
     name: "降噪详情",
     label: "降噪详情",
     path: "/cpal/detail",
-    icon: AudioOutlined ,
+    icon: AudioOutlined  ,
     component: () => import("@/views/cpal/detail.vue"),
     meta: {
       hideLayout: true, // 隐藏layout
